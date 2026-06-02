@@ -1,12 +1,24 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import Header from "@/components/layout/Header";
-import Footer from "@/components/layout/Footer";
+import { useCallback, useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
-import { Trash2, Minus, Plus, ShoppingBag } from "lucide-react";
-import { formatPrice } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import {
+  ArrowRight,
+  Minus,
+  PackageCheck,
+  Plus,
+  ShieldCheck,
+  ShoppingBag,
+  Store,
+  Trash2,
+  Truck,
+} from "lucide-react";
+import Footer from "@/components/layout/Footer";
+import Header from "@/components/layout/Header";
+import { getMediaImageUrl, PRODUCT_FALLBACK_IMAGE } from "@/lib/images";
+import { formatPrice } from "@/lib/utils";
 import { useCart } from "@/store/useCart";
 
 type CartItem = {
@@ -49,19 +61,21 @@ export default function CartPage() {
       (sum, item) => sum + Number(item.quantity || 0),
       0
     );
-
     const total_amount = items.reduce(
       (sum, item) => sum + Number(item.subtotal || 0),
       0
     );
 
-    return {
-      ...cart,
-      items,
-      total_quantity,
-      total_amount,
-    };
+    return { ...cart, items, total_quantity, total_amount };
   };
+
+  const clearSessionAndRedirect = useCallback(() => {
+    localStorage.removeItem("access");
+    localStorage.removeItem("refresh");
+    localStorage.removeItem("loggedInUser");
+    setCount(0);
+    router.push("/login");
+  }, [router, setCount]);
 
   const fetchCart = useCallback(async () => {
     const token = localStorage.getItem("access");
@@ -74,25 +88,12 @@ export default function CartPage() {
 
     try {
       const res = await fetch(`${API_URL}/cart/`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
-
       const data = await res.json();
 
-      console.log("FETCH CART RESPONSE:", {
-        status: res.status,
-        ok: res.ok,
-        data,
-      });
-
       if (res.status === 401) {
-        localStorage.removeItem("access");
-        localStorage.removeItem("refresh");
-        localStorage.removeItem("loggedInUser");
-        setCount(0);
-        router.push("/login");
+        clearSessionAndRedirect();
         return;
       }
 
@@ -111,7 +112,7 @@ export default function CartPage() {
     } finally {
       setLoading(false);
     }
-  }, [API_URL, router, setCount]);
+  }, [API_URL, clearSessionAndRedirect, router, setCount]);
 
   useEffect(() => {
     fetchCart();
@@ -121,16 +122,9 @@ export default function CartPage() {
     itemId: string | number,
     type: "plus" | "minus"
   ) => {
-    setActiveButtons((prev) => ({
-      ...prev,
-      [itemId]: type,
-    }));
-
+    setActiveButtons((prev) => ({ ...prev, [itemId]: type }));
     setTimeout(() => {
-      setActiveButtons((prev) => ({
-        ...prev,
-        [itemId]: null,
-      }));
+      setActiveButtons((prev) => ({ ...prev, [itemId]: null }));
     }, 200);
   };
 
@@ -149,21 +143,18 @@ export default function CartPage() {
 
     if (!targetItem) return;
 
-    let optimisticItems: CartItem[];
-
-    if (newQuantity <= 0) {
-      optimisticItems = cart.items.filter((item) => item.id !== itemId);
-    } else {
-      optimisticItems = cart.items.map((item) =>
-        item.id === itemId
-          ? {
-              ...item,
-              quantity: newQuantity,
-              subtotal: String(Number(item.unit_price) * newQuantity),
-            }
-          : item
-      );
-    }
+    const optimisticItems =
+      newQuantity <= 0
+        ? cart.items.filter((item) => item.id !== itemId)
+        : cart.items.map((item) =>
+            item.id === itemId
+              ? {
+                  ...item,
+                  quantity: newQuantity,
+                  subtotal: String(Number(item.unit_price) * newQuantity),
+                }
+              : item
+          );
 
     const optimisticCart = recalculateCart(optimisticItems);
 
@@ -181,21 +172,10 @@ export default function CartPage() {
         },
         body: JSON.stringify({ quantity: newQuantity }),
       });
-
       const data = await res.json();
 
-      console.log("UPDATE CART RESPONSE:", {
-        status: res.status,
-        ok: res.ok,
-        data,
-      });
-
       if (res.status === 401) {
-        localStorage.removeItem("access");
-        localStorage.removeItem("refresh");
-        localStorage.removeItem("loggedInUser");
-        setCount(0);
-        router.push("/login");
+        clearSessionAndRedirect();
         return;
       }
 
@@ -232,7 +212,6 @@ export default function CartPage() {
     if (!cart) return;
 
     const previousCart = cart;
-
     const optimisticItems = cart.items.filter((item) => item.id !== itemId);
     const optimisticCart = recalculateCart(optimisticItems);
 
@@ -244,25 +223,12 @@ export default function CartPage() {
     try {
       const res = await fetch(`${API_URL}/cart/item/${itemId}/delete/`, {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
-
       const data = await res.json();
 
-      console.log("REMOVE CART RESPONSE:", {
-        status: res.status,
-        ok: res.ok,
-        data,
-      });
-
       if (res.status === 401) {
-        localStorage.removeItem("access");
-        localStorage.removeItem("refresh");
-        localStorage.removeItem("loggedInUser");
-        setCount(0);
-        router.push("/login");
+        clearSessionAndRedirect();
         return;
       }
 
@@ -289,43 +255,63 @@ export default function CartPage() {
   };
 
   const items = cart?.items || [];
-
-  const subtotal = items.reduce((acc, item) => {
-    return acc + Number(item.subtotal);
-  }, 0);
+  const subtotal = items.reduce((acc, item) => acc + Number(item.subtotal), 0);
 
   if (loading) {
     return (
-      <main className="min-h-screen flex flex-col bg-[#f7f7f5]">
+      <main className="flex min-h-screen flex-col bg-[#f6f4ee]">
         <Header />
-
-        <section className="flex-1 flex items-center justify-center">
-          <p className="text-slate-500 text-lg">Loading cart...</p>
+        <section className="container-shell flex flex-1 items-center justify-center py-24">
+          <div className="w-full max-w-3xl rounded-[2rem] border border-[#ded8cc] bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
+            <div className="h-8 w-40 animate-pulse rounded-full bg-[#e9e3d7]" />
+            <div className="mt-6 grid gap-4">
+              {[1, 2, 3].map((item) => (
+                <div
+                  key={item}
+                  className="flex gap-4 rounded-2xl bg-[#f6f4ee] p-4"
+                >
+                  <div className="h-24 w-24 animate-pulse rounded-2xl bg-[#e5ddce]" />
+                  <div className="flex flex-1 flex-col justify-center gap-3">
+                    <div className="h-4 w-2/3 animate-pulse rounded-full bg-[#e5ddce]" />
+                    <div className="h-3 w-1/2 animate-pulse rounded-full bg-[#e5ddce]" />
+                    <div className="h-8 w-32 animate-pulse rounded-full bg-[#e5ddce]" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </section>
-
       </main>
     );
   }
 
   if (items.length === 0) {
     return (
-      <main className="min-h-screen bg-[#f7f7f5]">
+      <main className="min-h-screen bg-[#f6f4ee]">
         <Header />
-        <section className="container-shell flex flex-col items-center justify-center py-32 text-center">
-          <div className="rounded-full bg-slate-50 p-6">
-            <ShoppingBag className="h-12 w-12 text-slate-300" />
+        <section className="container-shell flex flex-col items-center justify-center py-24 text-center md:py-32">
+          <div className="relative rounded-[2rem] border border-[#ded8cc] bg-white p-8 shadow-[0_24px_70px_rgba(31,95,86,0.12)]">
+            <div className="absolute -right-5 -top-5 h-20 w-20 rounded-full bg-[#de922f]/15" />
+            <div className="relative rounded-3xl bg-[#f6f4ee] p-6">
+              <ShoppingBag className="h-14 w-14 text-[#1f5f56]" />
+            </div>
           </div>
-          <h1 className="mt-6 font-serif text-3xl font-bold text-slate-900">
+          <p className="mt-8 text-xs font-black uppercase tracking-[0.24em] text-[#2f8f83]">
+            Cart is waiting
+          </p>
+          <h1 className="mt-3 font-serif text-4xl font-bold tracking-tight text-[#10231f]">
             Your cart is empty
           </h1>
-          <p className="mt-2 text-slate-500">
-            Looks like you haven't added anything to your cart yet.
+          <p className="mt-3 max-w-md text-sm leading-6 text-[#66706b]">
+            Build your basket from verified stores and come back here when
+            you&apos;re ready to choose pickup or delivery.
           </p>
           <Link
             href="/products"
-            className="mt-8 rounded-lg bg-[#3a9688] px-8 py-3 font-bold text-white transition-all hover:shadow-lg"
+            className="mt-8 inline-flex items-center gap-2 rounded-full bg-[#1f5f56] px-8 py-4 text-sm font-bold text-white shadow-[0_18px_35px_rgba(31,95,86,0.22)] transition hover:bg-[#17483f]"
           >
             Start Shopping
+            <ArrowRight className="h-4 w-4" />
           </Link>
         </section>
         <Footer />
@@ -334,137 +320,236 @@ export default function CartPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f7f7f5]">
+    <main className="min-h-screen bg-[#f6f4ee]">
       <Header />
-      <section className="container-shell pt-12 pb-20 md:pb-24">
-        <h1 className="font-serif text-3xl font-bold text-brand-blue">
-          Shopping Cart
-        </h1>
+      <section className="container-shell pb-20 pt-10 md:pb-24 md:pt-12">
+        <div className="flex flex-col gap-5 border-b border-[#ded8cc] pb-6 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-[#2f8f83]">
+              Cart
+            </p>
+            <h1 className="mt-2 font-serif text-4xl font-bold tracking-tight text-[#10231f]">
+              Shopping Cart
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-[#66706b]">
+              Review your selected products before choosing pickup or delivery at checkout.
+            </p>
+          </div>
 
-        <div className="mt-8 grid items-start gap-8 lg:grid-cols-[1.8fr_1fr]">
-          <div className="space-y-4">
+          <div className="flex flex-wrap gap-2">
+            <span className="rounded-full border border-[#ded8cc] bg-white px-4 py-2 text-sm font-bold text-[#10231f]">
+              {cart?.total_quantity || 0} items
+            </span>
+            <span className="rounded-full border border-[#ded8cc] bg-white px-4 py-2 text-sm font-bold text-[#1f5f56]">
+              {formatPrice(subtotal)}
+            </span>
+          </div>
+        </div>
+
+        <div className="mt-6 grid items-start gap-8 lg:grid-cols-[minmax(0,1.65fr)_minmax(340px,0.85fr)]">
+          <div className="overflow-hidden rounded-[1.75rem] border border-[#ded8cc] bg-white shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#ded8cc] px-5 py-4">
+              <div>
+                <p className="text-sm font-black text-[#10231f]">
+                  Basket review
+                </p>
+                <p className="text-xs text-[#66706b]">
+                  {items.length} product {items.length === 1 ? "line" : "lines"} from your selected stores
+                </p>
+              </div>
+              <Link
+                href="/products"
+                className="rounded-full border border-[#ded8cc] px-4 py-2 text-xs font-bold text-[#1f5f56] transition hover:border-[#1f5f56] hover:bg-[#eef6f4]"
+              >
+                Add more items
+              </Link>
+            </div>
+
             {items.map((item) => {
               const unitPrice = Number(item.unit_price);
               const itemTotal = Number(item.subtotal);
               const activeButton = activeButtons[item.id];
+              const imageUrl = getMediaImageUrl(item.image, PRODUCT_FALLBACK_IMAGE);
 
               return (
                 <div
                   key={item.id}
-                  className="flex gap-4 rounded-xl border border-slate-100 bg-white p-4 shadow-sm"
+                  className="group border-b border-[#ded8cc] p-4 transition duration-300 last:border-b-0 hover:bg-[#fbfaf6] sm:p-5"
                 >
-                  <div className="h-24 w-24 shrink-0 overflow-hidden rounded-lg bg-slate-50">
-                    <img
-                      src={item.image || "/img/green_logo.png"}
-                      alt={item.product_name}
-                      className="h-full w-full object-cover"
-                    />
-                  </div>
-
-                  <div className="flex flex-1 flex-col justify-between">
-                    <div>
-                      <h3 className="font-bold text-slate-900">
-                        {item.product_name}
-                      </h3>
-                      <p className="text-xs text-slate-400">{item.outlet_name}</p>
-
-                      <p className="mt-1 font-bold text-slate-900">
-                        {formatPrice(unitPrice)}
-                      </p>
-
-                      <p className="mt-1 text-sm font-medium text-[#3a9688]">
-                        Total: {formatPrice(itemTotal)}
-                      </p>
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                    <div className="relative h-28 w-full shrink-0 overflow-hidden rounded-2xl bg-[#f3efe7] sm:h-24 sm:w-24">
+                      <Image
+                        src={imageUrl}
+                        alt={item.product_name}
+                        fill
+                        sizes="(max-width: 640px) 100vw, 112px"
+                        className="object-contain p-3 transition duration-300 group-hover:scale-105"
+                      />
                     </div>
 
-                    <div className="mt-3 flex w-fit items-center rounded-lg border border-slate-200 bg-white p-1 shadow-sm">
-                      <button
-                          onClick={() => {
-                            if (item.quantity <= 1) return; // ✅ prevent delete
-                            handleButtonFlash(item.id, "minus");
-                            updateQuantity(item.id, item.quantity - 1);
-                          }}
-                        className={`flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition-all duration-200 hover:bg-[#de922f] hover:text-white ${
-                          activeButton === "minus"
-                            ? "bg-[#de922f] text-white"
-                            : ""
-                        }`}
-                      >
-                        <Minus className="h-4 w-4" />
-                      </button>
+                    <div className="flex min-w-0 flex-1 flex-col justify-between gap-4 lg:flex-row lg:items-center">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:justify-between">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-[#eef6f4] px-2.5 py-1 text-[11px] font-bold text-[#1f5f56]">
+                              <PackageCheck className="h-3 w-3" />
+                              In cart
+                            </span>
+                            {item.outlet_name && (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-[#f6f4ee] px-2.5 py-1 text-[11px] font-semibold text-[#66706b]">
+                                <Store className="h-3 w-3" />
+                                {item.outlet_name}
+                              </span>
+                            )}
+                          </div>
 
-                      <span className="px-4 text-sm font-semibold text-slate-900">
-                        {item.quantity}
-                      </span>
+                          <h3 className="mt-3 truncate text-lg font-black text-[#10231f]">
+                            {item.product_name}
+                          </h3>
+                          <p className="mt-1 text-sm text-[#66706b]">
+                            {formatPrice(unitPrice)} each
+                          </p>
+                        </div>
+                        </div>
+                      </div>
 
-                      <button
-                        onClick={() => {
-                          handleButtonFlash(item.id, "plus");
-                          updateQuantity(item.id, item.quantity + 1);
-                        }}
-                        className={`flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition-all duration-200 hover:bg-[#de922f] hover:text-white ${
-                          activeButton === "plus"
-                            ? "bg-[#de922f] text-white"
-                            : ""
-                        }`}
-                      >
-                        <Plus className="h-4 w-4" />
-                      </button>
+                      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 lg:min-w-[260px] lg:justify-end">
+                        <div className="flex w-fit items-center rounded-full border border-[#ded8cc] bg-[#fbfaf6] p-1 shadow-sm">
+                          <button
+                            onClick={() => {
+                              if (item.quantity <= 1) return;
+                              handleButtonFlash(item.id, "minus");
+                              updateQuantity(item.id, item.quantity - 1);
+                            }}
+                            className={`flex h-9 w-9 items-center justify-center rounded-full text-[#66706b] transition-all duration-200 hover:bg-[#de922f] hover:text-white ${
+                              activeButton === "minus"
+                                ? "bg-[#de922f] text-white"
+                                : ""
+                            } ${item.quantity <= 1 ? "cursor-not-allowed opacity-40" : ""}`}
+                          >
+                            <Minus className="h-4 w-4" />
+                          </button>
+
+                          <span className="min-w-12 px-4 text-center text-sm font-black text-[#10231f]">
+                            {item.quantity}
+                          </span>
+
+                          <button
+                            onClick={() => {
+                              handleButtonFlash(item.id, "plus");
+                              updateQuantity(item.id, item.quantity + 1);
+                            }}
+                            className={`flex h-9 w-9 items-center justify-center rounded-full text-[#66706b] transition-all duration-200 hover:bg-[#de922f] hover:text-white ${
+                              activeButton === "plus"
+                                ? "bg-[#de922f] text-white"
+                                : ""
+                            }`}
+                          >
+                            <Plus className="h-4 w-4" />
+                          </button>
+                        </div>
+
+                        <button
+                          onClick={() => removeItem(item.id)}
+                          className="inline-flex h-10 w-10 items-center justify-center rounded-full text-red-500 transition-all duration-200 hover:bg-red-50"
+                          aria-label={`Remove ${item.product_name}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+
+                        <div className="w-full text-left lg:w-24 lg:text-right">
+                          <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#8a938c]">
+                            Total
+                          </p>
+                          <p className="mt-1 text-lg font-black text-[#10231f]">
+                            {formatPrice(itemTotal)}
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-
-                  <div className="flex items-end pb-1">
-                    <button
-                      onClick={() => removeItem(item.id)}
-                      className="flex h-10 w-10 items-center justify-center rounded-lg bg-transparent text-red-500 transition-all duration-200 hover:bg-[#de922f] hover:text-white"
-                    >
-                      <Trash2 className="h-5 w-5" />
-                    </button>
                   </div>
                 </div>
               );
             })}
           </div>
 
-          <div className="sticky top-24 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="font-serif text-xl font-semibold tracking-tight text-brand-blue">
-              Order Summary
-            </h2>
-
-            <div className="mt-6 space-y-3 text-sm">
-              <div className="flex justify-between text-slate-500">
-                <span className="font-medium">Subtotal</span>
-                <span className="font-semibold text-slate-900">
-                  {formatPrice(subtotal)}
-                </span>
+          <aside className="sticky top-24 overflow-hidden rounded-[1.75rem] border border-[#ded8cc] bg-white shadow-sm">
+            <div className="p-6">
+              <div className="flex items-center justify-between gap-4">
+                <h2 className="font-serif text-xl font-semibold tracking-tight text-[#10231f]">
+                  Order Summary
+                </h2>
+                <div className="rounded-2xl bg-[#f6f4ee] p-3">
+                  <ShoppingBag className="h-5 w-5 text-[#1f5f56]" />
+                </div>
               </div>
 
-              <div className="flex justify-between text-slate-500">
-                <span className="font-medium">Delivery/Pickup</span>
-                <span className="font-medium text-slate-400">
-                  Calculated at checkout
-                </span>
-              </div>
-            </div>
+              <div className="space-y-4 text-sm">
+                <div className="mt-6 flex justify-between gap-4">
+                  <span className="text-[#66706b]">Subtotal</span>
+                  <span className="font-black text-[#10231f]">
+                    {formatPrice(subtotal)}
+                  </span>
+                </div>
 
-            <div className="my-6 border-t border-slate-200 pt-6">
+                <div className="flex justify-between gap-4">
+                  <span className="text-[#66706b]">Delivery / pickup</span>
+                  <span className="text-right font-semibold text-[#8a938c]">
+                    Calculated at checkout
+                  </span>
+                </div>
+
+                <div className="flex justify-between gap-4">
+                  <span className="text-[#66706b]">Cart items</span>
+                  <span className="font-black text-[#10231f]">
+                    {cart?.total_quantity || 0}
+                  </span>
+                </div>
+              </div>
+
+              <div className="my-6 h-px bg-[#ded8cc]" />
+
               <div className="flex items-center justify-between">
-                <span className="text-lg font-semibold tracking-tight text-slate-900">
-                  Total
-                </span>
-                <span className="text-xl font-semibold text-slate-900">
+                <span className="text-lg font-black text-[#10231f]">Total</span>
+                <span className="text-2xl font-black text-[#10231f]">
                   {formatPrice(subtotal)}
                 </span>
               </div>
-            </div>
 
-            <Link
-              href="/checkout"
-              className="flex w-full items-center justify-center rounded-xl bg-[#1f5f56] py-4 font-semibold text-white transition-all duration-300 hover:bg-[#2f7f73] active:scale-[0.98]"
-            >
-              Proceed to Checkout
-            </Link>
-          </div>
+              <div className="my-6 h-px bg-[#ded8cc]" />
+
+              <div className="space-y-3 rounded-2xl bg-[#f6f4ee] p-4">
+                <div className="flex gap-3">
+                  <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-[#2f8f83]" />
+                  <p className="text-sm leading-5 text-[#66706b]">
+                    Secure checkout with your saved customer account.
+                  </p>
+                </div>
+                <div className="flex gap-3">
+                  <Truck className="mt-0.5 h-5 w-5 shrink-0 text-[#de922f]" />
+                  <p className="text-sm leading-5 text-[#66706b]">
+                    Pickup and delivery options are confirmed on the next step.
+                  </p>
+                </div>
+              </div>
+
+              <Link
+                href="/checkout"
+                className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-[#1f5f56] py-4 text-sm font-black text-white shadow-[0_18px_35px_rgba(31,95,86,0.22)] transition-all duration-300 hover:bg-[#17483f] active:scale-[0.98]"
+              >
+                Proceed to Checkout
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+
+              <Link
+                href="/products"
+                className="mt-3 flex w-full items-center justify-center rounded-full border border-[#ded8cc] py-3 text-sm font-bold text-[#1f5f56] transition hover:bg-[#eef6f4]"
+              >
+                Continue shopping
+              </Link>
+            </div>
+          </aside>
         </div>
       </section>
       <Footer />

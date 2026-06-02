@@ -1,54 +1,51 @@
 import Link from "next/link";
+import { BadgePercent, Building2, PackageCheck, Truck } from "lucide-react";
 
 const features = [
   {
-    title: "Flash Deals",
-    icon: "⚡",
-    bg: "bg-orange-100",
-    iconColor: "text-orange-500",
+    title: "Deals",
+    description: "Current store promos",
+    icon: BadgePercent,
+    href: "/products",
   },
   {
-    title: "Free Shipping",
-    icon: "🚚",
-    bg: "bg-red-100",
-    iconColor: "text-red-500",
+    title: "Delivery",
+    description: "Available local routes",
+    icon: Truck,
+    href: "/products",
   },
   {
-    title: "Rewards",
-    icon: "🪙",
-    bg: "bg-yellow-100",
-    iconColor: "text-yellow-500",
+    title: "Pickup",
+    description: "Branch-ready orders",
+    icon: PackageCheck,
+    href: "/stores",
   },
   {
-    title: "Mall",
-    icon: "🏬",
-    bg: "bg-blue-100",
-    iconColor: "text-blue-500",
+    title: "Stores",
+    description: "Verified sellers",
+    icon: Building2,
+    href: "/stores",
   },
 ];
 
 export default function FeatureIcons() {
   return (
-    <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       {features.map((feature) => (
         <Link
           key={feature.title}
-          href="/products"
-          className="group flex items-center gap-4 rounded-2xl bg-[#f8fafc] px-5 py-4 shadow-sm hover:shadow-md transition-all duration-300 active:scale-[0.98]"
+          href={feature.href}
+          className="group flex items-center gap-4 rounded-2xl border border-[#ded8cc] bg-white p-4 transition hover:-translate-y-0.5 hover:border-[#2f8f83]/45"
         >
-          {/* Icon */}
-          <div
-            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${feature.bg} ${feature.iconColor} text-xl transition-all duration-300 group-hover:scale-110`}
-          >
-            {feature.icon}
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#f3f0e8] text-[#1f5f56] transition group-hover:bg-[#e4f1eb]">
+            <feature.icon className="h-5 w-5" />
           </div>
 
-          {/* Text */}
-          <div className="leading-tight">
-            <h3 className="font-semibold text-brand-blue text-sm md:text-base">
+          <div className="min-w-0">
+            <h3 className="text-sm font-black text-[#10231f]">
               {feature.title}
             </h3>
-            <p className="text-xs text-slate-500">Explore now</p>
+            <p className="mt-1 text-xs text-[#7d877f]">{feature.description}</p>
           </div>
         </Link>
       ))}

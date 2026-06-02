@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
-import { ShoppingCart, Star } from "lucide-react";
+import { Package, ShoppingCart, Star } from "lucide-react";
 import { motion } from "framer-motion";
 import { ApiProduct } from "@/types/api-product";
 import { formatPrice } from "@/lib/utils";
+import { getMediaImageUrl, PRODUCT_FALLBACK_IMAGE } from "@/lib/images";
 import { useCart } from "@/store/useCart";
 import { useAnimationStore } from "@/store/useAnimationStore";
 import { useRouter } from "next/navigation";
@@ -21,34 +23,16 @@ export default function ProductCard({ product }: { product: ApiProduct }) {
 
   const router = useRouter();
   const API_URL = process.env.NEXT_PUBLIC_API_URL;
-  const API_BASE_URL = API_URL?.replace("/api", "") || "";
 
   const productId = product.inventory_item_id;
   const productLinkId = product.inventory_item_id;
-
-  const SUPABASE_BASE_URL =
-    "https://khdoeyvmsvszpmmcwzrt.supabase.co/storage/v1/object/public/media";
-
-  const getImageUrl = (image: string | null) => {
-    if (!image) return "/img/green_logo.png";
-
-    if (image.startsWith("http")) return image;
-
-    return `${SUPABASE_BASE_URL}/${image}`;
-  };
+  const imageSrc = getMediaImageUrl(product.image, PRODUCT_FALLBACK_IMAGE);
 
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
     const token = localStorage.getItem("access");
-
-    console.log("PRODUCT CARD ADD TO CART DEBUG:", {
-      fullProduct: product,
-      sentInventoryItemId: product.inventory_item_id,
-      sentProductId: product.product_id,
-      sentBranchId: product.outlet_id ?? null,
-    });
 
     if (!token) {
       localStorage.setItem("redirect_after_login", `/product/${productLinkId}`);
@@ -63,10 +47,7 @@ export default function ProductCard({ product }: { product: ApiProduct }) {
 
       if (buttonRef.current) {
         const rect = buttonRef.current.getBoundingClientRect();
-        triggerFlyToCart(
-          rect.left + rect.width / 2,
-          rect.top + rect.height / 2
-        );
+        triggerFlyToCart(rect.left + rect.width / 2, rect.top + rect.height / 2);
       }
 
       setCount(previousCount + 1);
@@ -103,7 +84,6 @@ export default function ProductCard({ product }: { product: ApiProduct }) {
           : previousCount + 1;
 
       setCount(totalCount);
-
       setIsAnimating(true);
       setTimeout(() => setIsAnimating(false), 800);
     } catch (error) {
@@ -118,60 +98,58 @@ export default function ProductCard({ product }: { product: ApiProduct }) {
   return (
     <Link
       href={`/product/${productLinkId}`}
-      className="group block overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+      className="group block overflow-hidden rounded-[1.35rem] border border-[#ded8cc] bg-white shadow-[0_10px_24px_rgba(15,23,42,0.05)] transition hover:-translate-y-1 hover:border-[#2f8f83]/45 hover:shadow-[0_18px_38px_rgba(15,23,42,0.10)]"
     >
-      
-      {/* IMAGE (shorter height instead of square) */}
-      <div className="relative w-full h-40 sm:h-44 md:h-48 bg-[#f8fafc] overflow-hidden">
-        <img
-          src={getImageUrl(product.image)}
+      <div className="relative h-56 w-full overflow-hidden bg-[#f3f0e8]">
+        <Image
+          src={imageSrc}
           alt={product.name}
-          className="w-full h-full object-cover transition duration-300 group-hover:scale-105"
+          className="object-contain p-5 transition duration-500 group-hover:scale-[1.03]"
+          fill
+          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 260px"
           loading="lazy"
-          onError={(e) => {
-            e.currentTarget.src = "/img/green_logo.png";
-          }}
+          quality={76}
         />
+        <div className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-[#1f5f56]">
+          Available
+        </div>
       </div>
 
-      <div className="p-2 sm:p-2.5">
-        {/* Product Name */}
-        <h3 className="text-[13px] sm:text-sm font-semibold text-[#2f8f83] line-clamp-1">
+      <div className="p-4.5">
+        <h3 className="text-[15px] font-black leading-tight text-[#10231f] line-clamp-2">
           {product.name}
         </h3>
 
-        {/* ⭐ Rating */}
-        <div className="mt-1 flex items-center gap-1">
-          <Star className="h-3 w-3 sm:h-3.5 sm:w-3.5 fill-[#de922f] text-[#de922f]" />
-          <span className="text-[10px] sm:text-[11px] text-slate-600">4.9</span>
-          <span className="text-[10px] text-slate-400">(89)</span>
+        <div className="mt-2 flex items-center gap-1">
+          <Star className="h-3.5 w-3.5 fill-[#d98b2b] text-[#d98b2b]" />
+          <span className="text-xs font-semibold text-[#66706b]">4.9</span>
+          <span className="text-xs text-[#9aa39b]">(89)</span>
         </div>
 
-        {/* Description */}
-        <p className="mt-1 text-[10px] sm:text-[11px] text-slate-500 line-clamp-1">
-          {product.description || "No description"}
+        <p className="mt-2 min-h-10 text-xs leading-5 text-[#66706b] line-clamp-2">
+          {product.description || "No description available yet."}
         </p>
 
-        {/* Bottom Row */}
-        <div className="mt-2 flex items-center justify-between" ref={buttonRef}>
+        <div className="mt-4 flex items-end justify-between gap-3" ref={buttonRef}>
           <div>
-            <p className="text-sm sm:text-base font-bold text-slate-900">
+            <p className="text-lg font-black text-[#10231f]">
               {formatPrice(product.price)}
             </p>
-            <p className="text-[10px] sm:text-[11px] text-slate-400">
-              Stock: {product.quantity}
+            <p className="mt-1 inline-flex items-center gap-1.5 text-xs font-semibold text-[#8a938c]">
+              <Package className="h-3.5 w-3.5" />
+              {product.quantity} in stock
             </p>
           </div>
 
           <motion.button
             type="button"
-            whileTap={{ scale: 0.9 }}
+            whileTap={{ scale: 0.92 }}
             onClick={handleAddToCart}
             disabled={isAdding}
-            className={`flex h-9 w-9 items-center justify-center rounded-full border ${
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition ${
               isAnimating
                 ? "bg-[#2f8f83] text-white"
-                : "bg-white text-slate-500 hover:bg-[#de922f] hover:text-white"
+                : "bg-[#10231f] text-white hover:bg-[#f97316]"
             } ${isAdding ? "cursor-not-allowed opacity-60" : ""}`}
           >
             <ShoppingCart className="h-4 w-4" />

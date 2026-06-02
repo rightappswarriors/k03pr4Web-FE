@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import Link from "next/link";
@@ -44,16 +45,12 @@ export default function ProductDetailPage({
   useEffect(() => {
     const loadProduct = async () => {
       try {
-        console.log("DETAIL ID:", id);
-        console.log("DETAIL URL:", `${API_URL}/products/${id}/`);
-
         const res = await fetch(`${API_URL}/products/${id}/`);
         if (!res.ok) {
           throw new Error(`Failed to fetch product: ${res.status}`);
         }
 
         const data = await res.json();
-        console.log("DETAIL DATA:", data);
         setProduct(data);
       } catch (error) {
         console.error("Failed to load product:", error);
@@ -88,13 +85,6 @@ export default function ProductDetailPage({
     if (!product || isAddingToCart) return;
 
     const token = localStorage.getItem("access");
-
-    console.log("DETAIL PAGE ADD TO CART DEBUG:", {
-      fullProduct: product,
-      sentInventoryItemId: product.inventory_item_id,
-      sentProductId: product.product_id,
-      sentBranchId: product.outlet_id ?? null,
-    });
 
     if (!token) {
       localStorage.setItem(
@@ -194,11 +184,15 @@ export default function ProductDetailPage({
         <div className="grid items-start gap-10 md:grid-cols-2">
           <div className="flex justify-center">
             <div className="w-full max-w-95 overflow-hidden rounded-2xl bg-[#fce4ec] shadow-sm md:max-w-105">
-              <div className="aspect-square">
-                <img
+              <div className="relative aspect-square">
+                <Image
                   src={getImageUrl(product.image)}
                   alt={product.name}
-                  className="h-full w-full object-cover"
+                  className="object-cover"
+                  fill
+                  sizes="(max-width: 768px) 100vw, 480px"
+                  priority
+                  quality={82}
                 />
               </div>
             </div>

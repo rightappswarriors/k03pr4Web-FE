@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Store, Truck } from "lucide-react";
+import { CheckCircle2, Store, Truck } from "lucide-react";
 
 type AuthShowcaseProps = {
   variant?: "customer" | "seller" | "supplier";
@@ -11,105 +11,88 @@ export default function AuthShowcase({
   const isSeller = variant === "seller";
   const isSupplier = variant === "supplier";
 
-  return (
-    <div className="relative hidden min-h-screen overflow-hidden bg-[#2f8f83] px-10 text-white lg:flex lg:w-1/2 items-center justify-center">
-      {/* Background effects */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.10),transparent_45%)]" />
-      <div className="absolute left-16 top-16 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
-      <div className="absolute bottom-20 right-16 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
+  const title = isSeller
+    ? "Open a store without the usual clutter."
+    : isSupplier
+    ? "Supply verified stores from one clean workflow."
+    : "A calmer way to shop local stores.";
 
-      <div className="relative z-10 mx-auto max-w-md text-center">
-        {/* Icon */}
-        <div className="mx-auto mb-8 inline-flex items-center justify-center rounded-3xl bg-white/20 backdrop-blur-xl shadow-lg ring-1 ring-white/30 px-6 py-4 max-w-fit">
-          {isSeller ? (
-            <Store className="h-10 w-10 text-white" />
-          ) : isSupplier ? (
-            <Truck className="h-10 w-10 text-white" />
-          ) : (
+  const copy = isSeller
+    ? "Create your storefront, publish products, and manage demand from a marketplace built around branch-ready commerce."
+    : isSupplier
+    ? "Reach more partner stores, organize product availability, and keep buyer communication in one place."
+    : "Sign in to browse verified stores, track branch availability, and keep checkout simple.";
+
+  return (
+    <aside className="relative hidden min-h-screen overflow-hidden bg-[#1f5f56] px-10 text-white lg:flex lg:w-1/2">
+      <div className="absolute inset-x-0 top-0 h-px bg-white/20" />
+      <div className="absolute -left-28 top-24 h-72 w-72 rounded-full bg-[#2f8f83]/35 blur-3xl" />
+      <div className="absolute -bottom-24 right-8 h-80 w-80 rounded-full bg-[#f97316]/20 blur-3xl" />
+
+      <div className="relative z-10 mx-auto flex w-full max-w-lg flex-col justify-between py-12">
+        <div className="flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3">
             <img
               src="/img/white_logo.png"
               alt="Kompra.ph"
-              className="h-28 w-auto object-contain drop-shadow-md"
+              className="h-11 w-auto"
             />
-          )}
+            <div>
+              <p className="text-xl font-black tracking-tight">
+                Kompra<span className="text-[#b7e4d8]">.ph</span>
+              </p>
+              <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.2em] text-[#b7e4d8]/70">
+                Local marketplace
+              </p>
+            </div>
+          </Link>
+
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-white/8">
+            {isSeller ? (
+              <Store className="h-5 w-5 text-[#b7e4d8]" />
+            ) : isSupplier ? (
+              <Truck className="h-5 w-5 text-[#b7e4d8]" />
+            ) : (
+              <CheckCircle2 className="h-5 w-5 text-[#b7e4d8]" />
+            )}
+          </div>
         </div>
 
-        {/* Title */}
-        <h1 className="mb-4 text-4xl font-serif font-bold tracking-tight">
-          {isSeller
-            ? "Sell on Kompra.ph"
-            : isSupplier
-            ? "Supply to Kompra.ph"
-            : "Kompra.ph"}
-        </h1>
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#b7e4d8]">
+            Secure marketplace access
+          </p>
+          <h1 className="mt-5 max-w-xl text-5xl font-black leading-[1.02] tracking-tight">
+            {title}
+          </h1>
+          <p className="mt-5 max-w-md text-base leading-7 text-white/75">
+            {copy}
+          </p>
 
-        {/* Description */}
-        <p className="mx-auto mb-10 max-w-sm text-base leading-8 text-white/90 sm:text-lg">
-          {isSeller
-            ? "Open your online store and reach thousands of customers. Manage your products, track orders, and grow your business."
-            : isSupplier
-            ? "Partner with us to supply products to hundreds of stores across the Philippines. Grow your distribution network with Kompra.ph."
-            : "Your one-stop marketplace for fresh, local products delivered right to your doorstep."}
-        </p>
-
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-6 border-t border-white/20 pt-8 text-center">
-          {isSeller ? (
-            <>
-              <div>
-                <p className="text-3xl font-bold">0%</p>
-                <p className="mt-1 text-sm text-white/80">Joining Fee</p>
+          <div className="mt-8 grid grid-cols-3 gap-3">
+            {[
+              ["Verified", "stores"],
+              ["Clear", "stock"],
+              ["Simple", "checkout"],
+            ].map(([value, label]) => (
+              <div
+                key={label}
+                className="rounded-2xl border border-white/12 bg-white/8 p-4"
+              >
+                <p className="text-lg font-black">{value}</p>
+                <p className="mt-1 text-xs text-white/60">{label}</p>
               </div>
-              <div>
-                <p className="text-3xl font-bold">24/7</p>
-                <p className="mt-1 text-sm text-white/80">Seller Support</p>
-              </div>
-              <div>
-                <p className="text-3xl font-bold">Fast</p>
-                <p className="mt-1 text-sm text-white/80">Payouts</p>
-              </div>
-            </>
-          ) : isSupplier ? (
-            <>
-              <div>
-                <p className="text-3xl font-bold">50+</p>
-                <p className="mt-1 text-sm text-white/80">Partner Stores</p>
-              </div>
-              <div>
-                <p className="text-3xl font-bold">Weekly</p>
-                <p className="mt-1 text-sm text-white/80">Settlements</p>
-              </div>
-              <div>
-                <p className="text-3xl font-bold">Dedicated</p>
-                <p className="mt-1 text-sm text-white/80">Account Mgr</p>
-              </div>
-            </>
-          ) : (
-            <>
-              <div>
-                <p className="text-3xl font-bold">500+</p>
-                <p className="mt-1 text-sm text-white/80">Products</p>
-              </div>
-              <div>
-                <p className="text-3xl font-bold">50+</p>
-                <p className="mt-1 text-sm text-white/80">Stores</p>
-              </div>
-              <div>
-                <p className="text-3xl font-bold">10K+</p>
-                <p className="mt-1 text-sm text-white/80">Users</p>
-              </div>
-            </>
-          )}
+            ))}
+          </div>
         </div>
 
-        {/* Back */}
         <Link
           href="/"
-          className="mt-10 inline-block text-sm text-white/90 hover:underline"
+          className="text-sm font-semibold text-white/70 transition hover:text-white"
         >
-           ← Back to Home
+          Back to marketplace
         </Link>
       </div>
-    </div>
+    </aside>
   );
 }

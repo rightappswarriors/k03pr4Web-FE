@@ -6,21 +6,26 @@ import { X, Loader2, ShieldCheck, CheckCircle2 } from "lucide-react";
 interface OTPModalProps {
   email: string;
   isOpen: boolean;
+  devOtp?: string;
   onClose: () => void;
   onVerify: (otp: string) => Promise<void>;
 }
 
-export default function OTPModal({ email, isOpen, onClose, onVerify }: OTPModalProps) {
+export default function OTPModal({ email, isOpen, devOtp, onClose, onVerify }: OTPModalProps) {
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
   const [isVerified, setIsVerified] = useState(false); // New state for animation
+  const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setMessage("");
     
     if (otp.length !== 6) {
       setError("Please enter a valid 6-digit code.");
@@ -41,6 +46,37 @@ export default function OTPModal({ email, isOpen, onClose, onVerify }: OTPModalP
       setError("Invalid or expired code. Please try again.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    setError("");
+    setMessage("");
+    setResending(true);
+
+    try {
+      const response = await fetch(`${API_URL}/resend-otp/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || "Unable to resend the code. Please try again.");
+        return;
+      }
+
+      setOtp("");
+      setMessage(
+        data.dev_otp
+          ? `Local dev OTP: ${data.dev_otp}`
+          : "A new verification code was sent to your email."
+      );
+    } catch (err) {
+      setError("Unable to connect to the server. Please check if the backend is running.");
+    } finally {
+      setResending(false);
     }
   };
 
@@ -83,6 +119,12 @@ export default function OTPModal({ email, isOpen, onClose, onVerify }: OTPModalP
                 We've sent a 6-digit verification code to <span className="font-semibold text-slate-700">{email}</span>.
               </p>
 
+              {devOtp && (
+                <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                  Local dev OTP: <span className="font-bold tracking-widest">{devOtp}</span>
+                </div>
+              )}
+
               <form onSubmit={handleSubmit} className="mt-8 w-full">
                 <input
                   type="text"
@@ -96,6 +138,10 @@ export default function OTPModal({ email, isOpen, onClose, onVerify }: OTPModalP
 
                 {error && (
                   <p className="mt-3 text-sm font-medium text-red-500">{error}</p>
+                )}
+
+                {message && (
+                  <p className="mt-3 text-sm font-medium text-[#2f8f83]">{message}</p>
                 )}
 
                 <button
@@ -116,10 +162,11 @@ export default function OTPModal({ email, isOpen, onClose, onVerify }: OTPModalP
 
               <button 
                 type="button"
-                className="mt-6 text-sm font-semibold text-[#2f8f83] hover:underline"
-                onClick={() => {/* Add resend logic here */}}
+                disabled={resending}
+                className="mt-6 text-sm font-semibold text-[#2f8f83] hover:underline disabled:cursor-not-allowed disabled:opacity-60"
+                onClick={handleResend}
               >
-                Didn't get the code? Resend
+                {resending ? "Sending new code..." : "Didn't get the code? Resend"}
               </button>
             </>
           )}

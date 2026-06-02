@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import {
   Globe,
   ExternalLink,
@@ -8,6 +9,7 @@ import {
   Twitter,
   Linkedin,
 } from "lucide-react";
+import { getMediaImageUrl, STORE_FALLBACK_IMAGE } from "@/lib/images";
 
 export default function AboutSection({
   organization,
@@ -170,14 +172,15 @@ export default function AboutSection({
 
         {/* RIGHT IMAGE */}
         <div className="space-y-4">
-          <div className="rounded-xl overflow-hidden border border-[#ebeae6] shadow-sm">
-            <img
-              src={
-                organization.bannerimg ||
-                "https://images.unsplash.com/photo-1542838132-92c53300491e"
-              }
+          <div className="relative aspect-video rounded-xl overflow-hidden border border-[#ebeae6] shadow-sm">
+            <Image
+              src={getMediaImageUrl(organization.bannerimg, STORE_FALLBACK_IMAGE)}
               alt={organization.name}
-              className="w-full h-full object-cover"
+              className="object-cover"
+              fill
+              sizes="(max-width: 768px) 100vw, 33vw"
+              loading="lazy"
+              quality={76}
             />
           </div>
         </div>
