@@ -35,17 +35,34 @@ export default function HomeProducts() {
     loadHomeProducts();
   }, [API_URL]);
 
-  if (loading) return <div className="py-12 text-center text-slate-500">Loading featured items...</div>;
+  if (loading) {
+    return (
+      <section className="rounded-2xl border border-[#ded8cc] bg-white p-8 text-center">
+        <p className="text-sm font-semibold text-slate-500">Loading featured items...</p>
+      </section>
+    );
+  }
 
   return (
-    <section className="container-shell py-12">
-      <div className="flex items-center justify-between mb-8">
-        <h2 className="font-serif text-3xl font-bold text-slate-900">Featured Products</h2>
+    <section className="space-y-6">
+      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#2f8f83]">
+            Products
+          </p>
+          <h2 className="mt-2 text-2xl font-black tracking-tight text-[#10231f] sm:text-3xl">
+            Featured products
+          </h2>
+          <p className="mt-3 max-w-xl text-sm leading-6 text-[#66706b]">
+            Popular items with clear pricing, stock, and quick cart access.
+          </p>
+        </div>
+
         <Link
           href="/products"
-          className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-semibold text-slate-600 transition-all duration-200 hover:bg-[#d98b2b] hover:text-white group"
+          className="group inline-flex items-center gap-2 text-sm font-bold text-[#1f5f56] transition hover:text-[#f97316]"
         >
-          View All
+          View all
           <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
         </Link>
       </div>

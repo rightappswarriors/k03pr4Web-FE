@@ -12,7 +12,7 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "Kumpra.ph | Multi-Store Ecommerce",
+  title: "kompra.ph | Multi-Store Ecommerce",
   description: "Your premium neighborhood marketplace",
 
   // ✅ ADDED: this sets your browser tab icon (favicon)

@@ -134,11 +134,11 @@ export default function NotificationDropdown() {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button className="relative flex h-10 w-10 items-center justify-center rounded-lg text-[#b7e4d8] hover:bg-white/10 hover:text-white">
-          <Bell size={20} />
+        <button className="relative flex h-10 w-10 items-center justify-center rounded-lg text-[#b7e4d8] transition hover:bg-white/10 hover:text-white">
+          <Bell size={19} />
 
           {/* Badge */}
-          <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 text-[10px] text-white font-bold">
+          <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#f97316] px-1 text-[9px] font-bold text-white">
             {unreadCount}
           </span>
         </button>

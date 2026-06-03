@@ -78,8 +78,6 @@ export default function OrganizationPage({
 
       const data = await res.json();
 
-      console.log("SEARCH RESULT:", data); // ✅ DEBUG
-
       setSearchResults(data);
 
       // ✅ AUTO SWITCH TAB BASED ON RESULT
@@ -100,14 +98,17 @@ export default function OrganizationPage({
 
     const loadData = async () => {
       try {
-        const orgRes = await fetch(`${API_URL}/organizations/slug/${slug}/`);
-        const orgData = await orgRes.json();
-
-        const [prodRes, catRes] = await Promise.all([
+        const [orgRes, prodRes, catRes] = await Promise.all([
+          fetch(`${API_URL}/organizations/slug/${slug}/`),
           fetch(`${API_URL}/products/`),
           fetch(`${API_URL}/categories/`), // ✅ FIX
         ]);
 
+        if (!orgRes.ok || !prodRes.ok || !catRes.ok) {
+          throw new Error("Failed to load seller data");
+        }
+
+        const orgData = await orgRes.json();
         const prodData = await prodRes.json();
         const catData = await catRes.json();
 
@@ -200,13 +201,13 @@ export default function OrganizationPage({
 
   if (loading) {
     return (
-      <main className="flex min-h-screen flex-col bg-[#f7f7f5]">
+      <main className="flex min-h-screen flex-col bg-[#f6f4ee]">
         <Header />
 
         <section className="flex flex-1 items-center justify-center">
-          <p className="text-lg text-gray-500">
-            Loading store...
-          </p>
+          <div className="rounded-2xl border border-[#ded8cc] bg-white px-6 py-5 text-center">
+            <p className="text-sm font-bold text-[#66706b]">Loading store...</p>
+          </div>
         </section>
       </main>
     );
@@ -215,16 +216,16 @@ export default function OrganizationPage({
   if (!organization) return <p className="p-10">Not found</p>;
 
   return (
-    <main className="min-h-screen flex flex-col bg-[#f7f7f5]">
+    <main className="min-h-screen flex flex-col bg-[#f6f4ee]">
       <Header />
 
       <div className="flex-1 flex flex-col">
 
         {/* 🌐 LANGUAGE BAR */}
-        <div className="border-b border-gray-200 bg-gray-50">
+        <div className="border-b border-[#ded8cc] bg-[#fbfaf6]">
           <div className="container-shell flex justify-between items-center py-2 text-xs">
 
-            <div className="flex items-center gap-2 text-gray-500">
+            <div className="flex items-center gap-2 text-[#66706b]">
               <Globe className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Choose language:</span>
             </div>
@@ -237,7 +238,7 @@ export default function OrganizationPage({
                   className={`px-2 py-0.5 rounded transition whitespace-nowrap ${
                     language === lang
                       ? "bg-[#2f8f83] text-white font-medium"
-                      : "text-gray-500 hover:text-[#2f8f83]"
+                      : "text-[#66706b] hover:text-[#2f8f83]"
                   }`}
                 >
                   {lang}
@@ -271,7 +272,7 @@ export default function OrganizationPage({
                 <>
                   <StoreHero organization={organization} />
 
-                  <div className="container-shell py-12 space-y-16">
+                  <div className="container-shell space-y-10 py-10 md:space-y-12">
                     <ProductCategories
                       categories={categories}
                       products={organizationProducts}

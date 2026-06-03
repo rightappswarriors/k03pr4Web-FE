@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
-import { MapPin, Store } from "lucide-react";
+import { ArrowUpRight, MapPin } from "lucide-react";
+import { getMediaImageUrl, STORE_FALLBACK_IMAGE } from "@/lib/images";
 
 export default function StoreCard({
   store,
@@ -13,71 +15,60 @@ export default function StoreCard({
   index?: number;
   variant?: "default" | "location";
 }) {
-
-  // ✅ EXISTING LOGIC
   const orgSlug = store.orgSlug;
   const locSlug = `${store.id}-${store.name.toLowerCase().replace(/\s+/g, "-")}`;
-
-  // ✅ DEBUG VALUES
-  const debugUrl = `/k/locations/${locSlug}?type=${store.type}&org=${orgSlug}`;
-
-  console.log("STORE DEBUG:", {
-    store,
-    orgSlug,
-    locSlug,
-    finalUrl: debugUrl,
-  });
+  const href = `/k/locations/${locSlug}?type=${store.type}&org=${orgSlug}`;
+  const imageSrc = getMediaImageUrl(store.image, STORE_FALLBACK_IMAGE);
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 14 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
-      transition={{
-        duration: 0.5,
-        delay: index * 0.1,
-        ease: "easeOut",
-      }}
+      transition={{ duration: 0.35, delay: index * 0.05, ease: "easeOut" }}
     >
       <Link
-        href={debugUrl}
-        className="group block overflow-hidden rounded-xl border border-slate-100 bg-white transition-all hover:border-[#3a9688]/30 hover:shadow-lg"
+        href={href}
+        className="group block overflow-hidden rounded-2xl border border-[#ded8cc] bg-white transition hover:-translate-y-0.5 hover:border-[#2f8f83]/45"
       >
-        <div className="relative aspect-16/10 overflow-hidden bg-slate-100">
-          <img
-            src={
-              store.image ||
-              "https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=1000&auto=format&fit=crop"
-            }
+        <div className="relative aspect-16/10 overflow-hidden bg-[#e7e0d3]">
+          <Image
+            src={imageSrc}
             alt={store.name}
-            className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+            className="object-cover transition duration-500 group-hover:scale-[1.03]"
+            fill
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 380px"
+            loading={index === 0 ? "eager" : "lazy"}
+            priority={index === 0}
+            quality={76}
           />
         </div>
 
         <div className="p-5">
-          <h3 className="font-serif text-xl font-bold text-slate-900 transition-colors group-hover:text-[#3a9688]">
-            {store.name}
-          </h3>
+          <div className="flex items-start justify-between gap-4">
+            <h3 className="text-lg font-black tracking-tight text-[#10231f]">
+              {store.name}
+            </h3>
+            <ArrowUpRight className="mt-1 h-4 w-4 shrink-0 text-[#8a938c] transition group-hover:text-[#2f8f83]" />
+          </div>
 
-          <p className="mt-2 text-sm leading-relaxed text-slate-500 line-clamp-2">
+          <p className="mt-2 text-sm leading-6 text-[#66706b] line-clamp-2">
             {store.description}
           </p>
 
-          
-
           <div className="mt-4">
             {variant === "location" ? (
-              <p className="text-sm text-slate-500">
-                📍 {store.description || "No address available"}
+              <p className="inline-flex items-center gap-2 text-sm text-[#66706b]">
+                <MapPin className="h-4 w-4 text-[#2f8f83]" />
+                {store.description || "No address available"}
               </p>
             ) : (
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#f5efe6] px-3 py-1 text-[11px] font-medium text-[#5f5646]">
-                  {store.branchCount || 0} Branches
+              <div className="flex flex-wrap gap-2">
+                <span className="rounded-full bg-[#f3f0e8] px-3 py-1 text-xs font-bold text-[#5f665f]">
+                  {store.branchCount || 0} branches
                 </span>
-
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#f5efe6] px-3 py-1 text-[11px] font-medium text-[#5f5646]">
-                  {store.outletCount || 0} Outlets
+                <span className="rounded-full bg-[#f3f0e8] px-3 py-1 text-xs font-bold text-[#5f665f]">
+                  {store.outletCount || 0} outlets
                 </span>
               </div>
             )}

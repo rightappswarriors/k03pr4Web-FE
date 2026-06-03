@@ -16,52 +16,33 @@ export default function StoreTabs({
   const tabs = ["home", "products", "locations", "about", "contact"];
 
   return (
-    <div className="bg-white border-b border-gray-200">
-      <div className="container-shell flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-
-        {/* TABS */}
-        <div className="flex gap-8 overflow-x-auto no-scrollbar">
+    <div className="sticky top-[73px] z-40 border-b border-[#ded8cc] bg-white/95 backdrop-blur">
+      <div className="container-shell flex flex-col gap-3 py-3 md:flex-row md:items-center md:justify-between">
+        <div className="flex gap-1 overflow-x-auto">
           {tabs.map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`
-                relative py-4 text-sm font-medium capitalize transition whitespace-nowrap
-                ${
-                  activeTab === tab
-                    ? "text-[#2f8f83]"
-                    : "text-gray-400 hover:text-gray-700"
-                }
-              `}
+              className={`shrink-0 rounded-full px-4 py-2 text-sm font-bold capitalize transition ${
+                activeTab === tab
+                  ? "bg-[#10231f] text-white"
+                  : "text-[#66706b] hover:bg-[#f3f0e8] hover:text-[#10231f]"
+              }`}
             >
               {tab}
-
-              {/* SMOOTH UNDERLINE */}
-              {activeTab === tab && (
-                <span className="absolute left-0 bottom-0 w-full h-0.5 bg-[#2f8f83] rounded-full" />
-              )}
             </button>
           ))}
         </div>
 
-        {/* SEARCH */}
-        <div className="relative w-full md:w-72">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-
+        <div className="relative w-full md:w-80">
+          <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8a938c]" />
           <input
             value={search}
-            onChange={(e) => {
-              const value = e.target.value;
-
-              setSearch(value); // 🔥 now this triggers backend search (from parent)
-
-              
-            }}
+            onChange={(e) => setSearch(e.target.value)}
             placeholder="Search in this store..."
-            className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#2f8f83]/30"
+            className="h-11 w-full rounded-xl border border-[#ded8cc] bg-[#fbfaf6] pl-10 pr-4 text-sm text-[#10231f] outline-none transition focus:border-[#2f8f83] focus:bg-white focus:ring-4 focus:ring-[#2f8f83]/10"
           />
         </div>
-
       </div>
     </div>
   );

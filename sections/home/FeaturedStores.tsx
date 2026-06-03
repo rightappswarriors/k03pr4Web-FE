@@ -31,23 +31,40 @@ export default function FeaturedStores() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="py-12 text-center text-slate-500">Loading top stores...</div>;
+  if (loading) {
+    return (
+      <section className="rounded-2xl border border-[#ded8cc] bg-white p-8 text-center">
+        <p className="text-sm font-semibold text-slate-500">Loading top stores...</p>
+      </section>
+    );
+  }
 
   return (
-    <section className="container-shell py-12">
-      <div className="flex items-center justify-between mb-8">
-        <h2 className="font-serif text-3xl font-bold text-slate-900">Best Selling Stores</h2>
-        <Link 
-          href="/stores" 
-          className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-semibold text-slate-600 transition-all duration-200 hover:bg-[#d98b2b] hover:text-white group"
+    <section className="space-y-6">
+      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div className="max-w-2xl">
+          <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#2f8f83]">
+            Stores
+          </p>
+          <h2 className="mt-2 text-2xl font-black tracking-tight text-[#10231f] sm:text-3xl">
+            Best selling stores
+          </h2>
+          <p className="mt-3 max-w-xl text-sm leading-6 text-[#66706b]">
+            Trusted sellers with active branches and products ready to browse.
+          </p>
+        </div>
+
+        <Link
+          href="/stores"
+          className="group inline-flex items-center gap-2 text-sm font-bold text-[#1f5f56] transition hover:text-[#f97316]"
         >
-          View All <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+          View all
+          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
         </Link>
       </div>
 
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {organizations.map((org, index) => {
-          // Calculate counts for the badges
           const branchCount = org.total_branches ?? org.branches?.length ?? 0;
           const outletCount = org.total_outlets ?? org.branches?.reduce(
             (total, branch) => total + (branch.outlets?.length || 0),
@@ -61,6 +78,8 @@ export default function FeaturedStores() {
             image: "https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=800&auto=format&fit=crop",
             branchCount: branchCount,
             outletCount: outletCount,
+            type: "branch",
+            orgSlug: org.name.toLowerCase().replace(/\s+/g, "-"),
           };
 
           return <StoreCard key={org.id} store={storeData as any} index={index} />;

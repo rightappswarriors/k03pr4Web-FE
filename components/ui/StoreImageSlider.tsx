@@ -1,8 +1,10 @@
 "use client"; // Required for Framer Motion and Embla hooks
 
 import React from "react";
+import Image from "next/image";
 import useEmblaCarousel from "embla-carousel-react";
 import Autoplay from "embla-carousel-autoplay";
+import { getMediaImageUrl, STORE_FALLBACK_IMAGE } from "@/lib/images";
 
 interface StoreImageSliderProps {
   // Accepts an array of image URLs
@@ -36,12 +38,18 @@ export default function StoreImageSlider({ images, alt }: StoreImageSliderProps)
         {images.map((src, index) => (
           // 5. Individual Slide (takes up full width)
           <div className="embla__slide relative flex-[0_0_100%] min-w-0" key={index}>
-            <img
-              src={src}
-              alt={`${alt} - view ${index + 1}`}
-              // Maintains aspect-square, matching original design
-              className="aspect-square w-full object-cover" 
-            />
+            <div className="relative aspect-square w-full">
+              <Image
+                src={getMediaImageUrl(src, STORE_FALLBACK_IMAGE)}
+                alt={`${alt} - view ${index + 1}`}
+                className="object-cover"
+                fill
+                sizes="(max-width: 1024px) 100vw, 50vw"
+                loading={index === 0 ? "eager" : "lazy"}
+                priority={index === 0}
+                quality={76}
+              />
+            </div>
           </div>
         ))}
       </div>
