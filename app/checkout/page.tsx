@@ -203,12 +203,12 @@ export default function CheckoutPage() {
     !placingOrder &&
     (mode === "delivery"
       ? !!selectedAddress &&
-        !!paymentMethod &&
-        (selectedCourierIds.length > 0 || isAnySelected) &&
-        (paymentMethod === "cod" || !!onlinePaymentOption)
+      !!paymentMethod &&
+      (selectedCourierIds.length > 0 || isAnySelected) &&
+      (paymentMethod === "cod" || !!onlinePaymentOption)
       : mode === "pickup"
-      ? !!selectedStore
-      : false);
+        ? !!selectedStore
+        : false);
 
   const getErrorMessage = (data: any) => {
     if (!data) return "Failed to place order.";
@@ -236,8 +236,8 @@ export default function CheckoutPage() {
       mode === "pickup"
         ? selectedStore?.id ?? null
         : items.length > 0
-        ? items[0].branch_id
-        : null;
+          ? items[0].branch_id
+          : null;
 
     if (!outletId) {
       alert("Please select a valid store or branch before placing the order.");
@@ -252,8 +252,8 @@ export default function CheckoutPage() {
         mode === "pickup"
           ? "PAY_AT_STORE"
           : paymentMethod === "cod"
-          ? "COD"
-          : onlinePaymentOption || "ONLINE",
+            ? "COD"
+            : onlinePaymentOption || "ONLINE",
       customer_note: "",
       courier_ids:
         mode === "delivery"
@@ -294,12 +294,8 @@ export default function CheckoutPage() {
       if (!res.ok) {
         const errorMessage = getErrorMessage(data);
         alert(errorMessage);
-
-        // If stock was insufficient, refetch the cart so the UI updates
         if (res.status === 400) {
-          // We can't call fetchCart directly because it's inside useEffect
-          // But we can trigger a window reload or a state update
-          window.location.reload(); 
+          window.location.reload();
         }
         return;
       }
@@ -310,7 +306,15 @@ export default function CheckoutPage() {
       setCart(null);
       localStorage.removeItem("latest_checkout_order");
 
-      router.push(`/tracking/${data.id}`);
+      // checkout now returns an array of orders (1 or more)
+      const orders: { id: number }[] = Array.isArray(data) ? data : [data];
+
+      if (orders.length === 1) {
+        router.push(`/tracking/${orders[0].id}`);
+      } else {
+        const ids = orders.map((o) => o.id).join(",");
+        router.push(`/checkout/confirmation?ids=${ids}`);
+      }
     } catch (error) {
       console.error("Checkout error:", error);
       alert(error instanceof Error ? error.message : "Failed to place order.");
@@ -352,16 +356,14 @@ export default function CheckoutPage() {
                     setMode("delivery");
                     setSelectedStore(null);
                   }}
-                  className={`flex flex-col gap-1.5 rounded-xl border-2 p-4 text-left transition-all ${
-                    mode === "delivery"
-                      ? "border-[#3a9688] bg-[#f8faf9]"
-                      : "border-slate-100 bg-white hover:border-slate-200"
-                  }`}
+                  className={`flex flex-col gap-1.5 rounded-xl border-2 p-4 text-left transition-all ${mode === "delivery"
+                    ? "border-[#3a9688] bg-[#f8faf9]"
+                    : "border-slate-100 bg-white hover:border-slate-200"
+                    }`}
                 >
                   <Truck
-                    className={`h-6 w-6 ${
-                      mode === "delivery" ? "text-[#3a9688]" : "text-slate-400"
-                    }`}
+                    className={`h-6 w-6 ${mode === "delivery" ? "text-[#3a9688]" : "text-slate-400"
+                      }`}
                   />
                   <span className="text-base font-bold text-brand-blue">Delivery</span>
                   <span className="text-xs font-medium text-slate-400">
@@ -377,16 +379,14 @@ export default function CheckoutPage() {
                     setOnlinePaymentOption(null);
                     setDeliveryFee(0);
                   }}
-                  className={`flex flex-col gap-1.5 rounded-xl border-2 p-4 text-left transition-all ${
-                    mode === "pickup"
-                      ? "border-[#3a9688] bg-[#f8faf9]"
-                      : "border-slate-100 bg-white hover:border-slate-200"
-                  }`}
+                  className={`flex flex-col gap-1.5 rounded-xl border-2 p-4 text-left transition-all ${mode === "pickup"
+                    ? "border-[#3a9688] bg-[#f8faf9]"
+                    : "border-slate-100 bg-white hover:border-slate-200"
+                    }`}
                 >
                   <Store
-                    className={`h-6 w-6 ${
-                      mode === "pickup" ? "text-[#3a9688]" : "text-slate-400"
-                    }`}
+                    className={`h-6 w-6 ${mode === "pickup" ? "text-[#3a9688]" : "text-slate-400"
+                      }`}
                   />
                   <span className="text-base font-bold text-brand-blue">Pickup</span>
                   <span className="text-xs font-medium text-slate-400">
@@ -427,7 +427,7 @@ export default function CheckoutPage() {
 
               {mode === "delivery" && selectedAddress && paymentMethod === "cod" && (
                 <div className="rounded-xl border border-slate-200 bg-white p-5">
-                  
+
                   {/* HEADER */}
                   <div className="flex items-center gap-2 mb-2">
                     <Bike className="h-5 w-5 text-[#3a9688]" />
@@ -451,11 +451,10 @@ export default function CheckoutPage() {
                       return (
                         <label
                           key={courier.id}
-                          className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition ${
-                            isChecked
-                              ? "border-[#3a9688] bg-[#f8faf9]"
-                              : "border-slate-200 hover:border-[#3a9688]/50"
-                          }`}
+                          className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition ${isChecked
+                            ? "border-[#3a9688] bg-[#f8faf9]"
+                            : "border-slate-200 hover:border-[#3a9688]/50"
+                            }`}
                         >
                           <Checkbox
                             checked={isChecked}
@@ -477,9 +476,9 @@ export default function CheckoutPage() {
                       {isAnySelected
                         ? "Selected: Any"
                         : `Selected: ${couriers
-                            .filter(c => selectedCourierIds.includes(c.id))
-                            .map(c => c.name)
-                            .join(", ")}`}
+                          .filter(c => selectedCourierIds.includes(c.id))
+                          .map(c => c.name)
+                          .join(", ")}`}
                     </p>
                   )}
                 </div>
@@ -556,11 +555,10 @@ export default function CheckoutPage() {
                 type="button"
                 onClick={handlePlaceOrder}
                 disabled={!canPlaceOrder}
-                className={`flex w-full items-center justify-center rounded-xl py-3 text-base font-bold text-white transition-all ${
-                  canPlaceOrder
-                    ? "bg-[#1f5f56] shadow-lg shadow-[#3a9688]/20 hover:bg-[#148a78]"
-                    : "pointer-events-none cursor-not-allowed bg-slate-300"
-                }`}
+                className={`flex w-full items-center justify-center rounded-xl py-3 text-base font-bold text-white transition-all ${canPlaceOrder
+                  ? "bg-[#1f5f56] shadow-lg shadow-[#3a9688]/20 hover:bg-[#148a78]"
+                  : "pointer-events-none cursor-not-allowed bg-slate-300"
+                  }`}
               >
                 {placingOrder ? "Placing Order..." : "Place Order"}
               </button>
