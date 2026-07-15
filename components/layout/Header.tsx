@@ -9,12 +9,7 @@ import { useCart } from "@/store/useCart";
 import { useAnimationStore } from "@/store/useAnimationStore";
 import { motion, AnimatePresence } from "framer-motion";
 import NotificationDropdown from "@/components/NotificationDropdown";
-
-type LoggedInUser = {
-  fullName?: string;
-  full_name?: string;
-  email?: string;
-};
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Navbar() {
   const router = useRouter();
@@ -25,7 +20,8 @@ export default function Navbar() {
   const isFlying = useAnimationStore((state) => state.isFlying);
   const setEndCoords = useAnimationStore((state) => state.setEndCoords);
 
-  const [loggedInUser, setLoggedInUser] = useState<LoggedInUser | null>(null);
+  const { isAuthenticated, user } = useAuth();
+
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const mobileProfileRef = useRef<HTMLDivElement>(null);
@@ -37,9 +33,7 @@ export default function Navbar() {
   const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
   const handleCartClick = () => {
-    const user = localStorage.getItem("loggedInUser");
-
-    if (!user) {
+    if (!isAuthenticated) {
       localStorage.setItem("redirect_after_login", "/cart");
       router.push("/login");
       return;
@@ -47,15 +41,6 @@ export default function Navbar() {
 
     router.push("/cart");
   };
-
-  useEffect(() => {
-    const user = localStorage.getItem("loggedInUser");
-    if (user) {
-      setLoggedInUser(JSON.parse(user));
-    } else {
-      setLoggedInUser(null);
-    }
-  }, []);
 
   useEffect(() => {
     const syncCartCount = async () => {
@@ -77,7 +62,7 @@ export default function Navbar() {
           localStorage.removeItem("access");
           localStorage.removeItem("refresh");
           localStorage.removeItem("loggedInUser");
-          setLoggedInUser(null);
+          window.dispatchEvent(new Event("auth-changed"));
           setCount(0);
           return;
         }
@@ -108,24 +93,7 @@ export default function Navbar() {
     };
 
     syncCartCount();
-
-    const handleStorageChange = () => {
-      const user = localStorage.getItem("loggedInUser");
-
-      if (user) {
-        setLoggedInUser(JSON.parse(user));
-      } else {
-        setLoggedInUser(null);
-        setCount(0);
-      }
-    };
-
-    window.addEventListener("storage", handleStorageChange);
-
-    return () => {
-      window.removeEventListener("storage", handleStorageChange);
-    };
-  }, [API_URL, setCount]);
+  }, [API_URL, setCount, isAuthenticated]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent | TouchEvent) {
@@ -198,17 +166,14 @@ export default function Navbar() {
     localStorage.removeItem("access");
     localStorage.removeItem("refresh");
     localStorage.removeItem("loggedInUser");
-    setLoggedInUser(null);
+    window.dispatchEvent(new Event("auth-changed"));
     setCount(0);
     setIsProfileOpen(false);
     router.push("/login");
   };
 
   const displayName =
-    loggedInUser?.fullName ||
-    loggedInUser?.full_name ||
-    loggedInUser?.email ||
-    "Profile";
+    user?.fullName || user?.full_name || user?.email || "Profile";
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-[#1f5f56]">
@@ -261,7 +226,7 @@ export default function Navbar() {
               </AnimatePresence>
             </div>
 
-            {loggedInUser ? (
+            {isAuthenticated ? (
               <div className="relative" ref={mobileProfileRef}>
                 <button
                   onClick={() => setIsProfileOpen(!isProfileOpen)}
@@ -333,9 +298,11 @@ export default function Navbar() {
               AI
             </Link>
 
-           <div className="flex h-10 items-center">
-              <NotificationDropdown />
-            </div>
+            {isAuthenticated && (
+              <div className="flex h-10 items-center">
+                <NotificationDropdown />
+              </div>
+            )}
 
             <div className="relative">
               <motion.div
@@ -366,7 +333,7 @@ export default function Navbar() {
               </AnimatePresence>
             </div>
 
-            {loggedInUser ? (
+            {isAuthenticated ? (
               <div className="relative" ref={desktopProfileRef}>
                 <button
                   onClick={() => setIsProfileOpen(!isProfileOpen)}
@@ -430,9 +397,7 @@ export default function Navbar() {
               AI
             </Link>
 
-
-            <NotificationDropdown />
-
+            {isAuthenticated && <NotificationDropdown />}
           </div>
         </div>
       </div>

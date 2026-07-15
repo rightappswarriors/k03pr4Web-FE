@@ -77,6 +77,8 @@ export default function LoginPage() {
         localStorage.setItem("access", data.access);
         localStorage.setItem("refresh", data.refresh);
 
+        window.dispatchEvent(new Event("auth-changed"));   
+
         const redirectPath = localStorage.getItem("redirect_after_login");
 
         if (redirectPath) {
@@ -218,21 +220,25 @@ export default function LoginPage() {
               </div>
 
               <div className="mt-4 grid grid-cols-2 gap-3">
-                <Link
-                  href="/register/store-seller"
+                <a
+                  href="https://portal.kompra.ph"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 rounded-xl border border-[#ded8cc] bg-[#fbfaf6] px-4 py-3 text-sm font-bold text-[#10231f] transition hover:border-[#de922f] hover:bg-white"
                 >
                   <Store className="h-4 w-4" />
                   Store Seller
-                </Link>
+                </a>
 
-                <Link
-                  href="/register/supplier"
+                <a
+                  href="https://portal.kompra.ph"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 rounded-xl border border-[#ded8cc] bg-[#fbfaf6] px-4 py-3 text-sm font-bold text-[#10231f] transition hover:border-[#de922f] hover:bg-white"
                 >
                   <Truck className="h-4 w-4" />
                   B2B Supplier
-                </Link>
+                </a>
               </div>
             </div>
 
