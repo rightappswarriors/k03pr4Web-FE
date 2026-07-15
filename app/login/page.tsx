@@ -77,6 +77,8 @@ export default function LoginPage() {
         localStorage.setItem("access", data.access);
         localStorage.setItem("refresh", data.refresh);
 
+        window.dispatchEvent(new Event("auth-changed"));   
+
         const redirectPath = localStorage.getItem("redirect_after_login");
 
         if (redirectPath) {
