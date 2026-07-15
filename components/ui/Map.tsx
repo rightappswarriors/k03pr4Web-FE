@@ -1,41 +1,48 @@
 "use client";
 
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
+import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
 
-// Fix for the marker icon disappearing
-const icon = L.icon({
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-});
-
-/* --- THE FIX IS HERE: Added 'label' to the interface --- */
 interface MapProps {
   lat: number;
   lng: number;
-  label?: string; // The '?' means it's optional
+  label?: string;
 }
 
+const containerStyle = {
+  width: "100%",
+  height: "100%",
+};
+
 export default function Map({ lat, lng, label = "Location" }: MapProps) {
-  return (
-    <div style={{ height: '100%', width: '100%', background: '#ebebeb' }}>
-      <MapContainer
-        center={[lat, lng]}
-        zoom={15}
-        scrollWheelZoom={false}
-        style={{ height: "100%", width: "100%" }}
+  const { isLoaded } = useJsApiLoader({
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_WEB_KEY || "",
+  });
+
+  if (!isLoaded) {
+    return (
+      <div
+        style={{ height: "100%", width: "100%", background: "#ebebeb" }}
+        className="flex items-center justify-center"
       >
-        <TileLayer
-          attribution='&copy; OpenStreetMap contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        <Marker position={[lat, lng]} icon={icon}>
-          <Popup>{label}</Popup>
-        </Marker>
-      </MapContainer>
+        <p className="text-sm text-slate-400">Loading map...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ height: "100%", width: "100%" }}>
+      <GoogleMap
+        mapContainerStyle={containerStyle}
+        center={{ lat, lng }}
+        zoom={15}
+        options={{
+          disableDefaultUI: false,
+          zoomControl: true,
+          scrollwheel: false,
+        }}
+      >
+        <Marker position={{ lat, lng }} title={label} />
+      </GoogleMap>
     </div>
   );
 }
