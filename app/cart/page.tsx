@@ -380,7 +380,7 @@ export default function CartPage() {
                     <div className="relative h-28 w-full shrink-0 overflow-hidden rounded-2xl bg-[#f3efe7] sm:h-24 sm:w-24">
                       <Image
                         src={imageUrl}
-                        alt={item.product_name}
+                        alt={item.product_name || "Product image"}
                         fill
                         sizes="(max-width: 640px) 100vw, 112px"
                         className="object-contain p-3 transition duration-300 group-hover:scale-105"
