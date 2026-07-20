@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ShoppingCart, User, LogOut, Sparkles } from "lucide-react";
+import { ShoppingCart, User, LogOut, Sparkles, Menu, X, Handshake } from "lucide-react";
 import SearchBar from "@/components/ui/SearchBar";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -11,7 +11,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import NotificationDropdown from "@/components/NotificationDropdown";
 import { useAuth } from "@/hooks/useAuth";
 
-export default function Navbar() {
+type HeaderProps = { wholesale?: boolean };
+
+export default function Navbar({ wholesale = false }: HeaderProps) {
   const router = useRouter();
 
   const count = useCart((state) => state.count);
@@ -23,6 +25,7 @@ export default function Navbar() {
   const { isAuthenticated, user } = useAuth();
 
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isWholesaleMenuOpen, setIsWholesaleMenuOpen] = useState(false);
 
   const mobileProfileRef = useRef<HTMLDivElement>(null);
   const desktopProfileRef = useRef<HTMLDivElement>(null);
@@ -78,12 +81,12 @@ export default function Navbar() {
           typeof data.total_quantity === "number"
             ? data.total_quantity
             : Array.isArray(data.items)
-            ? data.items.reduce(
+              ? data.items.reduce(
                 (sum: number, item: { quantity: number }) =>
                   sum + Number(item.quantity || 0),
                 0
               )
-            : 0;
+              : 0;
 
         setCount(totalCount);
       } catch (error) {
@@ -180,7 +183,7 @@ export default function Navbar() {
       <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-3 sm:px-6 md:flex-row md:items-center md:justify-between md:gap-5">
         <div className="flex items-center justify-between gap-3">
           <Link
-            href="/home"
+            href={wholesale ? '/wholesale' : '/home' }
             className="flex shrink-0 items-center gap-3"
           >
             <img
@@ -276,19 +279,13 @@ export default function Navbar() {
           </div>
 
           <nav className="hidden items-center gap-1 text-sm md:flex">
-            <Link
-              href="/products"
-              className="px-3 py-2 font-semibold text-[#b7e4d8] transition hover:text-white"
-            >
-              Products
-            </Link>
+            {(wholesale ? [
+              ["Products", "/wholesale/products"], ["Suppliers", "/wholesale/suppliers"], ["Deals", "/wholesale/deals"], ["Categories", "/wholesale#categories"],
+            ] : [["Products", "/products"], ["Stores", "/stores"]]).map(([label, href]) => (
+              <Link key={label} href={href} className="px-3 py-2 font-semibold text-[#b7e4d8] transition hover:text-white">{label}</Link>
+            ))}
 
-            <Link
-              href="/stores"
-              className="px-3 py-2 font-semibold text-[#b7e4d8] transition hover:text-white"
-            >
-              Stores
-            </Link>
+            {!wholesale && <Link href="/wholesale" className="inline-flex items-center gap-1.5 px-3 py-2 font-semibold text-[#b7e4d8] transition hover:text-white"><Handshake className="h-4 w-4" />Wholesale Mode</Link>}
 
             <Link
               href="/ai"
@@ -302,6 +299,15 @@ export default function Navbar() {
               <div className="flex h-10 items-center">
                 <NotificationDropdown />
               </div>
+            )}
+            {wholesale && (
+              <Link
+                href="/home"
+                className="inline-flex items-center gap-1.5 px-3 py-2 font-semibold text-[#b7e4d8] transition hover:text-white"
+              >
+                <ShoppingCart className="h-4 w-4" />
+                Retail Mode
+              </Link>
             )}
 
             <div className="relative">
@@ -374,30 +380,12 @@ export default function Navbar() {
             )}
           </nav>
 
-          <div className="flex items-center justify-center gap-1 border-t border-white/10 pt-2 text-sm md:hidden">
-            <Link
-              href="/products"
-              className="px-3 py-2 font-semibold text-[#b7e4d8] hover:text-white"
-            >
-              Products
-            </Link>
-
-            <Link
-              href="/stores"
-              className="px-3 py-2 font-semibold text-[#b7e4d8] hover:text-white"
-            >
-              Stores
-            </Link>
-
-            <Link
-              href="/ai"
-              className="inline-flex items-center px-3 py-2 font-semibold text-[#b7e4d8] hover:text-white"
-            >
-              <Sparkles className="h-4 w-4" />
-              AI
-            </Link>
-
-            {isAuthenticated && <NotificationDropdown />}
+          <div className="border-t border-white/10 pt-2 text-sm md:hidden">
+            {wholesale && <button type="button" aria-expanded={isWholesaleMenuOpen} onClick={() => setIsWholesaleMenuOpen((open) => !open)} className="flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 font-semibold text-[#b7e4d8] hover:bg-white/10 hover:text-white"><Menu className={isWholesaleMenuOpen ? "hidden h-4 w-4" : "h-4 w-4"} /><X className={isWholesaleMenuOpen ? "h-4 w-4" : "hidden h-4 w-4"} />Menu</button>}
+            <div className={wholesale && !isWholesaleMenuOpen ? "hidden" : "flex items-center justify-center gap-1"}>
+              {(wholesale ? [["Products", "/products"], ["Suppliers", "/wholesale#suppliers"], ["Deals", "/wholesale#deals"], ["Categories", "/wholesale#categories"]] : [["Products", "/products"], ["Stores", "/stores"]]).map(([label, href]) => <Link key={label} href={href} className="px-3 py-2 font-semibold text-[#b7e4d8] hover:text-white">{label}</Link>)}
+              <Link href="/ai" className="inline-flex items-center px-3 py-2 font-semibold text-[#b7e4d8] hover:text-white"><Sparkles className="h-4 w-4" /></Link><NotificationDropdown />
+            </div>
           </div>
         </div>
       </div>
