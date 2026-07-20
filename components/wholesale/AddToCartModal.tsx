@@ -55,7 +55,7 @@ type CartLine = {
 };
 
 // Helper function for tier label - only last tier shows "+"
-function tierLabel(tier: { minQty: number; maxQty: number | null | undefined }) {
+function tierLabel(tier: { minQty: number; maxQty?: number | null | undefined }) {
   return tier.maxQty == null ? `${tier.minQty}+` : `${tier.minQty}-${tier.maxQty}`;
 }
 
@@ -168,7 +168,7 @@ export default function AddToCartModal({
       // Base item - use tiered pricing
       const moq = pricing.supplierItem.moq;
       const unitPrice = computeBracketPrice(moq, pricing.priceTiers) || pricing.supplierItem.unitPrice;
-
+      
       try {
         const quote = await wholesaleApi.priceQuote(pricing.supplierItem.id, { quantity: moq });
         newLine = {
@@ -314,7 +314,7 @@ export default function AddToCartModal({
         const results = await Promise.allSettled(
           cartItems.map(item => wholesaleApi.addToCart({
             supplierItemId: pricing.supplierItem.id,
-            variantId: item.variantId,
+            variantId: item.variantId ?? undefined,
             quantity: item.quantity,
           }))
         );

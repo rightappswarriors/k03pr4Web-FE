@@ -204,6 +204,20 @@ export type WholesaleCartItem = {
   image?: string;
 };
 
+export type PricingQuoteTier = {
+  id: string;
+  minQty: number;
+  maxQty?: number;
+  price: number;
+  currency: string;
+};
+
+export type PricingQuote = {
+  unitPrice: number;
+  subtotal: number;
+  tierApplied: PricingQuoteTier | null;
+};
+
 export type RFQFormData = {
   quantity: string;
   targetPrice: string;

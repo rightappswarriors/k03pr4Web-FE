@@ -6,6 +6,7 @@ import type {
   WholesaleSupplier,
   WholesaleQuote,
   RFQFormData,
+  PricingQuote,
 } from "@/types/wholesale";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
@@ -72,7 +73,7 @@ export const wholesaleApi = {
   getPricing: (id: string): Promise<any> => apiFetch(`/supplier-items/${id}/pricing`),
 
   priceQuote: (id: string, body: { quantity: number; variantId?: string }) =>
-    apiFetch(`/supplier-items/${id}/price-quote`, {
+    apiFetch<PricingQuote>(`/supplier-items/${id}/price-quote`, {
       method: "POST",
       body: JSON.stringify(body),
     }),
