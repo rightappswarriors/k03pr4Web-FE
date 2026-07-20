@@ -1,3 +1,5 @@
+//k03pr4Web-FE\app\wholesale\products\page.tsx
+export const dynamic = "force-dynamic";
 import Header from "@/components/layout/Header";
 import WholesaleProductCard from "@/components/wholesale/WholesaleProductCard";
 import { wholesaleApi } from "@/services/wholesale.service";

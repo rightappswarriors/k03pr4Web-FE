@@ -9,12 +9,14 @@ export default function PromotionBanner({ banner }: { banner: WholesaleBanner })
       id="deals"
       className="relative min-h-[270px] overflow-hidden rounded-xl bg-emerald-950 p-6 text-white"
     >
-      <img
-        src={banner.image}
-        alt=""
-        loading="lazy"
-        className="absolute inset-0 h-full w-full object-cover opacity-30 mix-blend-screen"
-      />
+      {banner.image ? (
+        <img
+          src={banner.image}
+          alt=""
+          loading="lazy"
+          className="absolute inset-0 h-full w-full object-cover opacity-30 mix-blend-screen"
+        />
+      ) : null}
       <div className="relative max-w-[13rem]">
         <span className="inline-flex rounded-full bg-orange-400/20 px-2 py-1 text-xs font-bold text-orange-200">
           {banner.eyebrow}
