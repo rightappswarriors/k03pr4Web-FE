@@ -21,10 +21,15 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const wholesaleApi = {
-  getProducts: (params?: Record<string, string>): Promise<WholesaleProduct[]> => {
-    const qs = params ? `?${new URLSearchParams(params)}` : "";
-    return apiFetch(`/products${qs}`);
-  },
+  getProducts: async (params?: Record<string, string>): Promise<WholesaleProduct[]> => {
+  const qs = params ? `?${new URLSearchParams(params)}` : "";
+  try {
+    return await apiFetch(`/products${qs}`);
+  } catch (err) {
+    console.error("getProducts failed:", err);
+    return []; // let the page render empty/loading state instead of crashing
+  }
+},
 
   getProduct: (id: string): Promise<WholesaleProduct> => apiFetch(`/products/${id}`),
 
