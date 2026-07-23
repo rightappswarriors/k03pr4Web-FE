@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { ShoppingCart, User, LogOut, Sparkles, Menu, X, Handshake } from "lucide-react";
-import SearchBar from "@/components/ui/SearchBar";
+import WholesaleSearchBar from "@/components/ui/SearchBar";
+import SearchBar from "@/components/SearchBar";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/store/useCart";
@@ -183,7 +184,7 @@ export default function Navbar({ wholesale = false }: HeaderProps) {
       <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-3 sm:px-6 md:flex-row md:items-center md:justify-between md:gap-5">
         <div className="flex items-center justify-between gap-3">
           <Link
-            href={wholesale ? '/wholesale' : '/home' }
+            href={wholesale ? '/wholesale' : '/home'}
             className="flex shrink-0 items-center gap-3"
           >
             <img
@@ -274,7 +275,7 @@ export default function Navbar({ wholesale = false }: HeaderProps) {
         <div className="flex flex-col gap-3 md:flex-1 md:flex-row md:items-center md:justify-end">
           <div className="w-full md:mx-3 md:max-w-md lg:max-w-lg">
             <div className="relative w-full">
-              <SearchBar />
+              {wholesale ? <WholesaleSearchBar /> : <SearchBar />}
             </div>
           </div>
 
@@ -384,7 +385,8 @@ export default function Navbar({ wholesale = false }: HeaderProps) {
             {wholesale && <button type="button" aria-expanded={isWholesaleMenuOpen} onClick={() => setIsWholesaleMenuOpen((open) => !open)} className="flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 font-semibold text-[#b7e4d8] hover:bg-white/10 hover:text-white"><Menu className={isWholesaleMenuOpen ? "hidden h-4 w-4" : "h-4 w-4"} /><X className={isWholesaleMenuOpen ? "h-4 w-4" : "hidden h-4 w-4"} />Menu</button>}
             <div className={wholesale && !isWholesaleMenuOpen ? "hidden" : "flex items-center justify-center gap-1"}>
               {(wholesale ? [["Products", "/products"], ["Suppliers", "/wholesale#suppliers"], ["Deals", "/wholesale#deals"], ["Categories", "/wholesale#categories"]] : [["Products", "/products"], ["Stores", "/stores"]]).map(([label, href]) => <Link key={label} href={href} className="px-3 py-2 font-semibold text-[#b7e4d8] hover:text-white">{label}</Link>)}
-              <Link href="/ai" className="inline-flex items-center px-3 py-2 font-semibold text-[#b7e4d8] hover:text-white"><Sparkles className="h-4 w-4" /></Link><NotificationDropdown />
+              <Link href="/ai" className="inline-flex items-center px-3 py-2 font-semibold text-[#b7e4d8] hover:text-white"><Sparkles className="h-4 w-4" /></Link>
+              {isAuthenticated && <NotificationDropdown />}
             </div>
           </div>
         </div>
