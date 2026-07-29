@@ -1,23 +1,28 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Search } from "lucide-react";
+import { MapPin, Search, X } from "lucide-react";
 import { useSearch, type SearchSuggestion } from "@/hooks/useSearch";
+import { useGeolocation } from "@/hooks/useGeolocation";
 
 type SearchBarProps = {
-  lat?: number;
-  lng?: number;
   placeholder?: string;
   className?: string;
 };
 
 export default function SearchBar({
-  lat,
-  lng,
   placeholder = "Search products...",
   className = "",
 }: SearchBarProps) {
   const router = useRouter();
+  const {
+    coords,
+    cityName,
+    showBanner,
+    requestLocation,
+    dismissBanner,
+  } = useGeolocation();
+
   const {
     query,
     setQuery,
@@ -31,7 +36,7 @@ export default function SearchBar({
     setSelectedIndex,
     handleKeyDown,
     containerRef,
-  } = useSearch(lat, lng);
+  } = useSearch(coords?.lat, coords?.lng);
 
   const goToProduct = (item: SearchSuggestion) => {
     close();
@@ -71,6 +76,45 @@ export default function SearchBar({
           className="h-11 w-full rounded-lg border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#2f8f83] focus:ring-2 focus:ring-[#2f8f83]/20"
         />
       </div>
+
+      {/* Subtle location indicator, shown once we actually have a city name.
+          Uses the header's light accent color (not slate-grey) since this
+          sits directly on the dark teal header background, not a white card. */}
+      {cityName && (
+        <p className="mt-1 flex items-center gap-1 px-1 text-xs text-[#b7e4d8]">
+          <MapPin size={12} />
+          Near {cityName}
+        </p>
+      )}
+
+      {/* "Enable location for better results" banner — shown once per
+          session per useGeolocation's caching rules. Styled to match the
+          suggestions dropdown card below it for visual consistency. */}
+      {showBanner && (
+        <div className="absolute left-0 right-0 top-full z-40 mt-2 flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-lg">
+          <span className="flex items-center gap-2 text-sm text-slate-700">
+            <MapPin size={16} className="shrink-0 text-[#2f8f83]" />
+            Enable location for better results
+          </span>
+          <div className="flex shrink-0 items-center gap-3">
+            <button
+              type="button"
+              onClick={requestLocation}
+              className="rounded-lg bg-[#2f8f83] px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-[#26756b]"
+            >
+              Enable
+            </button>
+            <button
+              type="button"
+              onClick={dismissBanner}
+              aria-label="Dismiss"
+              className="text-slate-400 transition hover:text-slate-600"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {showDropdown && (
         <ul
