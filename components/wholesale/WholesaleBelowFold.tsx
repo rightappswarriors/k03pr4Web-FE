@@ -29,8 +29,14 @@ export default function WholesaleBelowFold() {
   const [suppliers, setSuppliers] = useState<WholesaleSupplier[] | null>(null);
 
   useEffect(() => {
-    wholesaleApi.getProducts().then(setProducts);
-    wholesaleApi.getSuppliers().then(setSuppliers);
+    wholesaleApi
+      .getProducts()
+      .then(setProducts)
+      .catch(() => setProducts([]));
+    wholesaleApi
+      .getSuppliers()
+      .then(setSuppliers)
+      .catch(() => setSuppliers([]));
   }, []);
 
   if (!products || !suppliers) {
