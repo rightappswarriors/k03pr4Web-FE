@@ -11,10 +11,24 @@ import type {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
+function getAgentToken(): string | null {
+  if (typeof localStorage === "undefined") return null;
+  return localStorage.getItem("agent_access_token");
+}
+
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers = new Headers(init?.headers as HeadersInit | undefined);
+  if (!headers.has("Authorization")) {
+    const token = getAgentToken();
+    if (token) {
+      headers.set("Authorization", `Bearer ${token}`);
+    }
+  }
+  headers.set("Content-Type", "application/json");
+
   const res = await fetch(`${API_BASE}/wholesale${path}`, {
-    headers: { "Content-Type": "application/json" },
     ...init,
+    headers,
   });
   if (!res.ok) throw new Error(`Wholesale API error: ${res.status} ${path}`);
   return res.json();

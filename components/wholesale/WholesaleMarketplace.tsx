@@ -13,6 +13,8 @@ import WholesaleFooter from "@/components/wholesale/WholesaleFooter";
 import { wholesaleApi } from "@/services/wholesale.service";
 import { getRecentlyViewedIds } from "@/lib/recentlyViewed";
 import type { WholesaleBanner, WholesaleCategory, WholesaleProduct } from "@/types/wholesale";
+import { useAuth } from "@/hooks/useAuth";
+import { logDev } from "@/lib/logDev";
 
 const WholesaleBelowFold = dynamic(() => import("@/components/wholesale/WholesaleBelowFold"), { loading: () => <div className="container-shell py-10"><div className="h-72 animate-pulse rounded-xl bg-slate-200" /></div> });
 
@@ -29,6 +31,7 @@ function LoadingRecommendations() {
 }
 
 export default function WholesaleMarketplace() {
+  const { isAuthenticated, user } = useAuth()
   const [recentlyViewed, setRecentlyViewed] = useState<WholesaleProduct[]>([]);
   const [frequentlySearched, setFrequentlySearched] = useState<WholesaleProduct[]>([]);
 
@@ -36,23 +39,33 @@ export default function WholesaleMarketplace() {
   const [recommendations, setRecommendations] = useState<WholesaleProduct[]>([]);
   const [banners, setBanners] = useState<WholesaleBanner[]>([]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   useEffect(() => {
     const viewedIds = getRecentlyViewedIds();
-
+    logDev("check authenticated: ", isAuthenticated)
+    logDev("Check user data: ", user)
     Promise.all([
-      wholesaleApi.getCategories(),
-      wholesaleApi.getRecommendations(),
+      wholesaleApi.getCategories().catch(() => [] as WholesaleCategory[]),
+      wholesaleApi.getRecommendations().catch(() => [] as WholesaleProduct[]),
       wholesaleApi.getBanners(),
-      wholesaleApi.getProductsByIds(viewedIds),
-      wholesaleApi.getFrequentlySearchedProducts(),
-    ]).then(([categoryData, productData, bannerData, viewedData, frequentData]) => {
-      setCategories(categoryData);
-      setRecommendations(productData);
-      setBanners(bannerData);
-      setRecentlyViewed(viewedData);
-      setFrequentlySearched(frequentData);
-    });
+      wholesaleApi.getProductsByIds(viewedIds).catch(() => [] as WholesaleProduct[]),
+      wholesaleApi.getFrequentlySearchedProducts().catch(() => [] as WholesaleProduct[]),
+    ])
+      .then(([categoryData, productData, bannerData, viewedData, frequentData]) => {
+        setCategories(categoryData);
+        setRecommendations(productData);
+        setBanners(bannerData);
+        setRecentlyViewed(viewedData);
+        setFrequentlySearched(frequentData);
+      })
+      .catch((err) => {
+        setApiError(err?.message ?? "Failed to load wholesale marketplace data.");
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
   }, []);
 
 
@@ -61,6 +74,14 @@ export default function WholesaleMarketplace() {
       <Header wholesale />
       <WholesaleHero />
       <QuickActionStrip />
+
+      {apiError && (
+        <div className="container-shell py-4">
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {apiError}
+          </div>
+        </div>
+      )}
 
       {/* Mobile drawer overlay */}
       {isDrawerOpen && (
@@ -91,14 +112,16 @@ export default function WholesaleMarketplace() {
           <CategorySidebar categories={categories} />
 
           {/* Center: Recommendation sections */}
-          {recommendations.length ? (
+          {isLoading ? (
+            <LoadingRecommendations />
+          ) : recommendations.length ? (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               <RecommendationCard products={recommendations} title="Browsing history" />
               <RecommendationCard products={recentlyViewed} title="Continue looking" />
               <RecommendationCard products={frequentlySearched} title="Frequently searched" />
             </div>
           ) : (
-            <LoadingRecommendations />
+            <div className="text-center py-12 text-slate-500">No recommendations available at this time.</div>
           )}
 
           {/* Right: Promotional banner */}

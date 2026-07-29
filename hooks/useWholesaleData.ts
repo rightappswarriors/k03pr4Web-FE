@@ -19,17 +19,23 @@ export function useWholesaleData(): WholesaleData {
 
   useEffect(() => {
     Promise.all([
-      wholesaleApi.getProducts(),
-      wholesaleApi.getSuppliers(),
-      wholesaleApi.getCategories(),
+      wholesaleApi.getProducts().catch(() => [] as WholesaleProduct[]),
+      wholesaleApi.getSuppliers().catch(() => [] as WholesaleSupplier[]),
+      wholesaleApi.getCategories().catch(() => [] as WholesaleCategory[]),
       wholesaleApi.getBanners(),
-    ]).then(([productData, supplierData, categoryData, bannerData]) => {
-      setProducts(productData);
-      setSuppliers(supplierData);
-      setCategories(categoryData);
-      setBanners(bannerData);
-      setIsLoading(false);
-    });
+    ])
+      .then(([productData, supplierData, categoryData, bannerData]) => {
+        setProducts(productData);
+        setSuppliers(supplierData);
+        setCategories(categoryData);
+        setBanners(bannerData);
+      })
+      .catch(() => {
+        /* all errors already caught per-call above */
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
   }, []);
 
   return { products, suppliers, categories, banners, isLoading };

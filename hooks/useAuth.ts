@@ -13,21 +13,48 @@ type AuthState = {
   isLoading: boolean;
   user: LoggedInUser | null;
 };
-
-function readAuthFromStorage(): { isAuthenticated: boolean; user: LoggedInUser | null } {
+function readAuthFromStorage(): {
+  isAuthenticated: boolean;
+  user: LoggedInUser | null;
+} {
   const token = localStorage.getItem("access");
   const storedUser = localStorage.getItem("loggedInUser");
 
-  if (!token || !storedUser) {
-    return { isAuthenticated: false, user: null };
+  const agentToken = localStorage.getItem("agent_access_token");
+  const storedAgent = localStorage.getItem("agent");
+
+  const hasRetail = !!token && !!storedUser;
+  const hasAgent = !!agentToken && !!storedAgent;
+
+  if (!hasRetail && !hasAgent) {
+    return {
+      isAuthenticated: false,
+      user: null,
+    };
   }
 
   try {
-    const parsedUser = JSON.parse(storedUser) as LoggedInUser;
-    return { isAuthenticated: true, user: parsedUser };
-  } catch {
-    return { isAuthenticated: false, user: null };
+    if (hasRetail && storedUser) {
+      return {
+        isAuthenticated: true,
+        user: JSON.parse(storedUser),
+      };
+    }
+
+    if (hasAgent && storedAgent) {
+      return {
+        isAuthenticated: true,
+        user: JSON.parse(storedAgent),
+      };
+    }
+  } catch (err) {
+    console.error(err);
   }
+
+  return {
+    isAuthenticated: false,
+    user: null,
+  };
 }
 
 export function useAuth(): AuthState {
