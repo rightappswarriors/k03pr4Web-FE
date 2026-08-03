@@ -79,6 +79,17 @@ export default function MapView() {
           disableDefaultUI: false,
           zoomControl: true,
           scrollwheel: true,
+          styles: [
+            {
+              featureType: "poi",
+              stylers: [{ visibility: "off" }],
+            },
+            {
+              featureType: "transit",
+              elementType: "labels.icon",
+              stylers: [{ visibility: "off" }],
+            },
+          ],
         }}
       >
         <OverlayView
