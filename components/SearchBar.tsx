@@ -55,8 +55,7 @@ export default function SearchBar({
       setQuery(initialQuery);
       setIsOpen(true);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [initialQuery]);
 
   const goToProduct = (item: SearchSuggestion) => {
     close();
@@ -108,9 +107,8 @@ export default function SearchBar({
       </div>
 
       {cityName && (
-        <p className={`mt-1 flex items-center gap-1 px-1 text-xs ${
-          variant === "light" ? "text-slate-500" : "text-[#b7e4d8]"
-        }`}>
+        <p className={`mt-1 flex items-center gap-1 px-1 text-xs ${variant === "light" ? "text-slate-500" : "text-[#b7e4d8]"
+          }`}>
           <MapPin size={12} />
           Near {cityName}
         </p>
@@ -172,15 +170,14 @@ export default function SearchBar({
               !error &&
               suggestions.map((item, index) => (
                 <li
-                  key={item.item_id}
+                  key={item.inventory_item_id}
                   id={`search-suggestion-${index}`}
                   role="option"
                   aria-selected={index === selectedIndex}
                   onMouseEnter={() => setSelectedIndex(index)}
                   onClick={() => goToProduct(item)}
-                  className={`flex cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2 text-left transition ${
-                    index === selectedIndex ? "bg-slate-100" : "hover:bg-slate-50"
-                  }`}
+                  className={`flex cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2 text-left transition ${index === selectedIndex ? "bg-slate-100" : "hover:bg-slate-50"
+                    }`}
                 >
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-slate-100">
                     {item.category_icon ? (
