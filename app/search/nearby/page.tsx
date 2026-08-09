@@ -21,6 +21,10 @@ const MapView = dynamic(() => import("@/components/MapView"), {
     ),
 });
 
+const OutletDetailDrawer = dynamic(() => import("@/components/OutletDetailDrawer"), {
+    ssr: false,
+});
+
 type NearestOutlet = {
     outletId: number;
     name: string;
@@ -59,6 +63,9 @@ export default function SearchNearbyPage() {
 
     const [activeOutletId, setActiveOutletId] = useState<number | null>(null);
     const [hoveredOutletId, setHoveredOutletId] = useState<number | null>(null);
+
+    // Drawer state: which outlet's detail is currently open. null = closed.
+    const [drawerOutletId, setDrawerOutletId] = useState<number | null>(null);
 
     const [sheetExpanded, setSheetExpanded] = useState(false);
     const dragStartY = useRef<number | null>(null);
@@ -110,6 +117,7 @@ export default function SearchNearbyPage() {
         setActiveOutletId(null);
         setHoveredOutletId(null);
         setSheetExpanded(false);
+        setDrawerOutletId(null);
     }, [initialQuery]);
 
     // Expand the sheet automatically once results load, on mobile —
@@ -121,17 +129,23 @@ export default function SearchNearbyPage() {
         }
     }, [outlets.length]);
 
+    // Pin clicked on the map -> highlight + scroll the matching card into
+    // view, expand the mobile sheet, and open the detail drawer.
     const handlePinClick = useCallback((outletId: number) => {
         setActiveOutletId(outletId);
         setSheetExpanded(true);
+        setDrawerOutletId(outletId);
         const cardEl = cardRefs.current[outletId];
         if (cardEl) {
             cardEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
         }
     }, []);
 
+    // Card clicked in the list -> same active state as clicking its pin,
+    // and opens the same drawer.
     const handleCardClick = useCallback((outletId: number) => {
         setActiveOutletId(outletId);
+        setDrawerOutletId(outletId);
     }, []);
 
     // Drag handlers for the mobile bottom sheet handle.
@@ -362,6 +376,13 @@ export default function SearchNearbyPage() {
             </section>
 
             <Footer />
+
+            {/* Outlet detail drawer — opens when a pin or card is clicked */}
+            <OutletDetailDrawer
+                outletId={drawerOutletId}
+                itemId={selectedItem?.item_id ?? null}
+                onClose={() => setDrawerOutletId(null)}
+            />
         </main>
     );
 }
