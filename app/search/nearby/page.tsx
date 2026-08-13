@@ -6,9 +6,11 @@ import dynamic from "next/dynamic";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import SearchBar from "@/components/SearchBar";
+import OutletListPanel from "@/components/OutletListPanel";
 import { useGeolocation } from "@/hooks/useGeolocation";
+import { useInfiniteOutlets } from "@/hooks/useInfiniteOutlets";
 import type { SearchSuggestion } from "@/hooks/useSearch";
-import { MapPin, Store, Clock, ChevronUp } from "lucide-react";
+import { ChevronUp } from "lucide-react";
 import type { MapOutlet } from "@/components/MapView";
 
 const MapView = dynamic(() => import("@/components/MapView"), {
@@ -21,26 +23,12 @@ const MapView = dynamic(() => import("@/components/MapView"), {
     ),
 });
 
-type NearestOutlet = {
-    outletId: number;
-    name: string;
-    latitude: number;
-    longitude: number;
-    distance: number;
-    price: number;
-    quantity: number;
-    photo: string | null;
-    deliveryConfig: {
-        isDeliveryActive: boolean;
-        baseDeliveryFee: number;
-    } | null;
-    operatingHours: string | null;
-};
+const OutletDetailDrawer = dynamic(() => import("@/components/OutletDetailDrawer"), {
+    ssr: false,
+});
 
 const DEFAULT_RADIUS_KM = 10;
 const UNLIMITED_RADIUS_KM = 500;
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 // Bottom sheet snap heights, as a fraction of viewport height.
 const SHEET_PEEK_HEIGHT = 140; // px, shows handle + count + partial first card
@@ -53,12 +41,12 @@ export default function SearchNearbyPage() {
     const { coords } = useGeolocation();
     const [selectedItem, setSelectedItem] = useState<SearchSuggestion | null>(null);
     const [maxDistanceEnabled, setMaxDistanceEnabled] = useState(true);
-    const [outlets, setOutlets] = useState<NearestOutlet[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
 
     const [activeOutletId, setActiveOutletId] = useState<number | null>(null);
     const [hoveredOutletId, setHoveredOutletId] = useState<number | null>(null);
+
+    // Drawer state: which outlet's detail is currently open. null = closed.
+    const [drawerOutletId, setDrawerOutletId] = useState<number | null>(null);
 
     const [sheetExpanded, setSheetExpanded] = useState(false);
     const dragStartY = useRef<number | null>(null);
@@ -68,48 +56,19 @@ export default function SearchNearbyPage() {
 
     const radiusKm = maxDistanceEnabled ? DEFAULT_RADIUS_KM : UNLIMITED_RADIUS_KM;
 
-    const fetchOutlets = useCallback(async () => {
-        if (!selectedItem || !coords) return;
-
-        setLoading(true);
-        setError(null);
-        try {
-            const params = new URLSearchParams({
-                itemId: String(selectedItem.item_id),
-                lat: String(coords.lat),
-                lng: String(coords.lng),
-                radiusKm: String(radiusKm),
-            });
-            const url = `${API_URL}/outlets/nearest?${params.toString()}`;
-
-            const res = await fetch(url, {
-                cache: "no-store",
-            });
-            const data = await res.json();
-
-            if (!res.ok) {
-                throw new Error(data?.error || "Failed to fetch nearby outlets.");
-            }
-            setOutlets(data.outlets);
-        } catch (err) {
-            console.error("fetchOutlets error:", err);
-            setError(err instanceof Error ? err.message : "Something went wrong.");
-            setOutlets([]);
-        } finally {
-            setLoading(false);
-        }
-    }, [selectedItem, coords, radiusKm]);
-
-    useEffect(() => {
-        fetchOutlets();
-    }, [fetchOutlets]);
+    const { outlets, loading, loadingMore, error, hasMore, loadMore } = useInfiniteOutlets({
+        itemId: selectedItem?.item_id ?? null,
+        lat: coords?.lat,
+        lng: coords?.lng,
+        radiusKm,
+    });
 
     useEffect(() => {
         setSelectedItem(null);
-        setOutlets([]);
         setActiveOutletId(null);
         setHoveredOutletId(null);
         setSheetExpanded(false);
+        setDrawerOutletId(null);
     }, [initialQuery]);
 
     // Expand the sheet automatically once results load, on mobile —
@@ -121,17 +80,23 @@ export default function SearchNearbyPage() {
         }
     }, [outlets.length]);
 
+    // Pin clicked on the map -> highlight + scroll the matching card into
+    // view, expand the mobile sheet, and open the detail drawer.
     const handlePinClick = useCallback((outletId: number) => {
         setActiveOutletId(outletId);
         setSheetExpanded(true);
+        setDrawerOutletId(outletId);
         const cardEl = cardRefs.current[outletId];
         if (cardEl) {
             cardEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
         }
     }, []);
 
+    // Card clicked in the list -> same active state as clicking its pin,
+    // and opens the same drawer.
     const handleCardClick = useCallback((outletId: number) => {
         setActiveOutletId(outletId);
+        setDrawerOutletId(outletId);
     }, []);
 
     // Drag handlers for the mobile bottom sheet handle.
@@ -143,8 +108,6 @@ export default function SearchNearbyPage() {
     const handleDragEnd = useCallback((clientY: number) => {
         if (dragStartY.current === null) return;
         const delta = dragStartY.current - clientY;
-        // Dragged up more than 50px -> expand. Dragged down more than
-        // 50px -> collapse. Otherwise treat as a tap, toggle state.
         if (delta > 50) {
             setSheetExpanded(true);
         } else if (delta < -50) {
@@ -163,84 +126,6 @@ export default function SearchNearbyPage() {
         price: o.price,
         distance: o.distance,
     }));
-
-    const outletListContent = (
-        <>
-            <div className="mb-4 flex items-center gap-2">
-                <Store className="h-5 w-5 text-[#2f8f83]" />
-                <h2 className="text-lg font-semibold text-slate-900">
-                    {loading ? "Searching..." : `${outlets.length} outlet${outlets.length === 1 ? "" : "s"} found`}
-                </h2>
-            </div>
-
-            {error && (
-                <p className="text-sm text-red-600">{error}</p>
-            )}
-
-            {!loading && !error && outlets.length === 0 && (
-                <p className="text-sm text-slate-400">
-                    No outlets found nearby with this item in stock.
-                </p>
-            )}
-
-            <ul className="space-y-3">
-                {outlets.map((outlet, index) => {
-                    const isActive = outlet.outletId === activeOutletId;
-                    const isHovered = outlet.outletId === hoveredOutletId;
-
-                    return (
-                        <li
-                            key={outlet.outletId}
-                            ref={(el) => {
-                                cardRefs.current[outlet.outletId] = el;
-                            }}
-                            onClick={() => handleCardClick(outlet.outletId)}
-                            onMouseEnter={() => setHoveredOutletId(outlet.outletId)}
-                            onMouseLeave={() => setHoveredOutletId(null)}
-                            className={`flex cursor-pointer gap-3 rounded-2xl border p-4 transition ${isActive
-                                ? "border-[#1f6b5f] bg-[#2f8f83]/10 ring-2 ring-[#2f8f83]/40"
-                                : isHovered
-                                    ? "border-[#4fb3a3] bg-[#4fb3a3]/5"
-                                    : "border-slate-200 hover:bg-slate-50"
-                                }`}
-                        >
-                            <div
-                                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white ${isActive ? "bg-[#1f6b5f]" : "bg-[#2f8f83]"
-                                    }`}
-                            >
-                                {index + 1}
-                            </div>
-
-                            {outlet.photo && (
-                                <img
-                                    src={outlet.photo}
-                                    alt={outlet.name}
-                                    className="h-14 w-14 shrink-0 rounded-lg object-cover"
-                                />
-                            )}
-
-                            <div className="min-w-0 flex-1">
-                                <p className="font-semibold text-slate-900">{outlet.name}</p>
-                                <p className="mt-1 flex items-center gap-1 text-xs text-slate-500">
-                                    <MapPin size={12} />
-                                    {outlet.distance.toFixed(1)} km away
-                                </p>
-                                <p className="mt-1 text-sm text-slate-700">
-                                    ₱{outlet.price.toFixed(2)} · {outlet.quantity} in stock
-                                </p>
-                                {outlet.operatingHours && (
-                                    <p className="mt-1 flex items-center gap-1 text-xs text-slate-400">
-                                        <Clock size={12} />
-                                        {outlet.operatingHours}
-                                    </p>
-                                )}
-                            </div>
-                        </li>
-                    );
-                })}
-            </ul>
-        </>
-    );
 
     return (
         <main className="min-h-screen flex flex-col bg-[#f7f7f5]">
@@ -308,7 +193,19 @@ export default function SearchNearbyPage() {
                             </div>
 
                             <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm max-h-[600px] overflow-y-auto">
-                                {outletListContent}
+                                <OutletListPanel
+                                    outlets={outlets}
+                                    loading={loading}
+                                    loadingMore={loadingMore}
+                                    error={error}
+                                    hasMore={hasMore}
+                                    onLoadMore={loadMore}
+                                    activeOutletId={activeOutletId}
+                                    hoveredOutletId={hoveredOutletId}
+                                    onCardClick={handleCardClick}
+                                    onCardHover={setHoveredOutletId}
+                                    cardRefs={cardRefs}
+                                />
                             </div>
                         </div>
 
@@ -353,7 +250,19 @@ export default function SearchNearbyPage() {
                                 </div>
 
                                 <div className="px-5 pb-6 overflow-y-auto h-full">
-                                    {outletListContent}
+                                    <OutletListPanel
+                                        outlets={outlets}
+                                        loading={loading}
+                                        loadingMore={loadingMore}
+                                        error={error}
+                                        hasMore={hasMore}
+                                        onLoadMore={loadMore}
+                                        activeOutletId={activeOutletId}
+                                        hoveredOutletId={hoveredOutletId}
+                                        onCardClick={handleCardClick}
+                                        onCardHover={setHoveredOutletId}
+                                        cardRefs={cardRefs}
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -362,6 +271,13 @@ export default function SearchNearbyPage() {
             </section>
 
             <Footer />
+
+            {/* Outlet detail drawer — opens when a pin or card is clicked */}
+            <OutletDetailDrawer
+                outletId={drawerOutletId}
+                itemId={selectedItem?.item_id ?? null}
+                onClose={() => setDrawerOutletId(null)}
+            />
         </main>
     );
 }
