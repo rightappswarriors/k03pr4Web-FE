@@ -6,6 +6,11 @@ import { useState, useEffect } from "react";
 import { Lock, Loader2, Mail, Store, Truck, User, Shield } from "lucide-react";
 import AuthShowcase from "@/components/auth/AuthShowcase";
 import OTPModal from "@/components/ui/OTPModal";
+import {
+  setAgentTokens,
+  setAgentInfo,
+  clearAgentAuth,
+} from "@/lib/agent-auth-storage";
 
 type LoginMode = "retail" | "agent";
 
@@ -18,7 +23,8 @@ export default function LoginPage() {
 
   useEffect(() => {
     const mode = searchParams.get("mode");
-    if (mode === "agent") {
+    const role = searchParams.get("role");
+    if (mode === "agent" || role === "agent") {
       setLoginMode("agent");
     }
   }, [searchParams]);
@@ -47,12 +53,10 @@ export default function LoginPage() {
     throw new Error("Invalid code");
   };
 
-  const clearAuthState = () => {
+  const clearRetailAuthState = () => {
     localStorage.removeItem("access");
     localStorage.removeItem("refresh");
     localStorage.removeItem("loggedInUser");
-    localStorage.removeItem("agent_access_token");
-    localStorage.removeItem("agent");
     window.dispatchEvent(new Event("auth-changed"));
   };
 
@@ -86,7 +90,8 @@ export default function LoginPage() {
           console.log("[Login] Retail Customer login successful", { userId: data.user?.id, email: data.user?.email });
         }
 
-        clearAuthState();
+        clearRetailAuthState();
+        clearAgentAuth(); // ensure no stale agent session
 
         localStorage.setItem(
           "loggedInUser",
@@ -157,7 +162,7 @@ export default function LoginPage() {
 
       const data = await response.json();
 
-      if (response.ok && data.accessToken) {
+      if (response.ok && data.success && data.accessToken) {
         if (process.env.NODE_ENV === "development") {
           console.log("[Login] Procurement Agent login successful", {
             agentId: data.agent?.id,
@@ -167,23 +172,19 @@ export default function LoginPage() {
         }
 
         // Store agent token SEPARATELY - never overwrite user_access_token
-        localStorage.setItem("agent_access_token", data.accessToken);
-        localStorage.setItem("agent_refresh_token", data.refreshToken || "");
-        localStorage.setItem(
-          "agent",
-          JSON.stringify({
-            id: data.agent.id,
-            email: data.agent.email,
-            fullname: data.agent.fullname,
-            phone: data.agent.phone,
-            verificationStatus: data.agent.verificationStatus,
-            organizationId: data.agent.organizationId,
-            agentType: data.agent.agentType,
-          })
-        );
+        // setAgentTokens persists to localStorage + sync cookie
+        setAgentTokens(data.accessToken, data.refreshToken || "");
 
-        // Also set a cookie so Next.js middleware can read it
-        document.cookie = `agent_access_token=${data.accessToken}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=lax`;
+        // Store agent profile info
+        setAgentInfo({
+          id: data.agent.id,
+          email: data.agent.email,
+          fullname: data.agent.fullname,
+          phone: data.agent.phone,
+          verificationStatus: data.agent.verificationStatus,
+          organizationId: data.agent.organizationId,
+          agentType: data.agent.agentType,
+        });
 
         window.dispatchEvent(new Event("auth-changed"));
 
@@ -195,7 +196,7 @@ export default function LoginPage() {
 
         router.push(getRedirectPath(status));
       } else {
-        const errorMessage = data.error || "Invalid email or password.";
+        const errorMessage = data.error || data.message || "Invalid email or password.";
         if (process.env.NODE_ENV === "development") {
           console.log("[Login] Agent login failed", { error: errorMessage });
         }
@@ -210,8 +211,8 @@ export default function LoginPage() {
 
   const getRedirectPath = (verificationStatus: string): string => {
     switch (verificationStatus) {
-      case "APPROVED": // 
-        return "/wholesale/"; // PRODUCTION NEED: /wholesale/dashboard
+      case "APPROVED":
+        return "/wholesale/dashboard";
       case "PENDING_VERIFICATION":
       case "PENDING_ORGANIZATION_APPROVAL":
         return "/agent/pending";

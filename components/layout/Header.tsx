@@ -11,6 +11,7 @@ import { useAnimationStore } from "@/store/useAnimationStore";
 import { motion, AnimatePresence } from "framer-motion";
 import NotificationDropdown from "@/components/NotificationDropdown";
 import { useAuth } from "@/hooks/useAuth";
+import { clearAgentAuth } from "@/lib/agent-auth-storage";
 
 type HeaderProps = { wholesale?: boolean };
 
@@ -167,9 +168,12 @@ export default function Navbar({ wholesale = false }: HeaderProps) {
   }, [setEndCoords]);
 
   const handleLogout = () => {
+    // Clear retail customer auth
     localStorage.removeItem("access");
     localStorage.removeItem("refresh");
     localStorage.removeItem("loggedInUser");
+    // Clear agent auth (tokens + cookie)
+    clearAgentAuth();
     window.dispatchEvent(new Event("auth-changed"));
     setCount(0);
     setIsProfileOpen(false);

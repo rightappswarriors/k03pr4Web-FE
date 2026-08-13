@@ -114,6 +114,9 @@ export default function SearchBar({
         </p>
       )}
 
+      {/* "Enable location for better results" banner — shown once per
+          session per useGeolocation's caching rules. Styled to match the
+          suggestions dropdown card below it for visual consistency. */}
       {showBanner && (
         <div className="absolute left-0 right-0 top-full z-40 mt-2 flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-lg">
           <span className="flex items-center gap-2 text-sm text-slate-700">

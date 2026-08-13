@@ -32,6 +32,7 @@ export { default as ProductReviews } from "./ProductReviews";
 export { default as ProductDocuments } from "./ProductDocuments";
 export { default as SupplierCapabilityCard } from "./SupplierCapabilityCard";
 export { default as RFQModal } from "./RFQModal";
+export { default as RequestQuotationDrawer } from "./RequestQuotationDrawer";
 export { default as SupplierChat } from "./SupplierChat";
 export { default as ProductActionsCard } from "./ProductActionsCard";
 export { default as AddToCartModal } from "./AddToCartModal";

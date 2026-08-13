@@ -13,7 +13,7 @@ export default function ProductSupplierCard({ product }: ProductSupplierCardProp
           <h3 className="text-lg font-semibold text-slate-900">{product.supplier}</h3>
           <div className="flex items-center gap-1.5 text-sm text-slate-500">
             <MapPin className="size-4" />
-            <span>{product.supplierLocation}</span>
+            <span>{product.supplierLocation || "Location not specified"}</span>
           </div>
         </div>
         {product.supplierVerified && (

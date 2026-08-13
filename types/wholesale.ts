@@ -93,15 +93,28 @@ export type WholesaleProductDetail = {
   description?: string;
   supplier: string;
   supplierVerified: boolean;
+<<<<<<< HEAD
+  supplierLocation?: string;
+=======
   supplierLocation: string;
+>>>>>>> origin/main
   supplierResponseTime?: string;
   supplierCapabilities?: SupplierCapability[];
   priceTiers: ProductPriceTier[];
   moq: string;
+<<<<<<< HEAD
+  sku?: string;
+  availableQty?: number;
+=======
+>>>>>>> origin/main
   sampleAvailable: boolean;
   samplePrice?: string;
   leadTime: string;
   shippingFrom: string;
+<<<<<<< HEAD
+  unit?: string;
+=======
+>>>>>>> origin/main
   category: string;
   verified: boolean;
   totalOrders?: number;
@@ -225,3 +238,372 @@ export type RFQFormData = {
   deliveryDate: string;
   contactMethod: "email" | "phone" | "chat";
 };
+<<<<<<< HEAD
+
+// ============================================
+// RFQ (Request for Quotation) Types
+// ============================================
+
+
+export type RfqSupplier = {
+  id: string;
+  name: string;
+  verified: boolean;
+  location?: string;
+  rating?: number;
+};
+
+export type RfqConversationMessage = {
+  id: string;
+  senderId: string;
+  senderName: string;
+  senderRole: "AGENT" | "SUPPLIER";
+  message: string;
+  attachments: string[];
+  createdAt: string;
+};
+
+export type RequestForQuotation = {
+  id: string;
+  rfqNumber: string;
+  agentId: string;
+  agentName: string;
+  supplierOrgId?: number | null;
+  supplierOrgName?: string | null;
+  supplierItemId?: string | null;
+  supplier?: RfqSupplier;
+  status: RfqStatus;
+  conversationId?: string | null;
+  targetUnitPrice?: number | null;
+  quantity?: number | null;
+  expectedDeliveryDate?: string | null;
+  notes?: string | null;
+  validityDays?: number | null;
+  acceptedPrice?: number | null;
+  acceptedQuantity?: number | null;
+  acceptedDeliveryDate?: string | null;
+  messages: RfqConversationMessage[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RfqListItem = {
+  id: string;
+  rfqNumber: string;
+  supplier: string;
+  product: string;
+  quantity: number;
+  status: RfqStatus;
+  expectedDeliveryDate?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateRfqDto = {
+  supplierItemId: string;
+  quantity: number;
+  targetUnitPrice: number;
+  expectedDeliveryDate?: string;
+  message?: string;
+  attachments?: string[];
+};
+
+export type UpdateRfqDto = {
+  status?: string;
+  notes?: string;
+  expectedDeliveryDate?: string;
+  validityDays?: number;
+};
+
+// ============================================
+// Conversation & Negotiation Types
+// ============================================
+
+export type ConversationRole = "AGENT" | "SUPPLIER";
+
+export type NegotiationOfferStatus = "PENDING" | "COUNTERED" | "ACCEPTED" | "REJECTED";
+
+export type ConversationParticipant = {
+  id: string;
+  conversationId: string;
+  agentId?: string | null;
+  organizationId?: number | null;
+  role: ConversationRole;
+  joinedAt: string;
+  lastReadAt?: string | null;
+};
+
+export type ConversationMessage = {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  senderName: string;
+  senderRole: ConversationRole;
+  message: string;
+  type: string;
+  attachments: string[];
+  createdAt: string;
+  clientMessageId?: string | null;
+  metadata?: Record<string, any> | null;
+};
+
+export type NegotiationOffer = {
+  id: string;
+  conversationId: string;
+  senderType: ConversationRole;
+  senderName: string;
+  quantity: number;
+  unitPrice: number;
+  deliveryDate?: string | null;
+  notes?: string | null;
+  status: NegotiationOfferStatus;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ConversationSupplier = {
+  id: string;
+  name: string;
+  verified: boolean;
+  location?: string | null;
+  profilePhoto?: string | null;
+  rating?: number | null;
+};
+
+export type ConversationProduct = {
+  id: string;
+  name: string;
+  sku?: string | null;
+  image?: string | null;
+  unit?: string | null;
+  moq?: number | null;
+  availableQty?: number | null;
+  leadTime?: string | null;
+  priceTiers?: Array<{
+    minQty: number;
+    maxQty?: number | null;
+    unitPrice: number;
+    currency: string;
+  }>;
+};
+
+export type ConversationRfq = {
+  id: string;
+  rfqNumber: string;
+  status: string;
+  targetUnitPrice?: number | null;
+  quantity?: number | null;
+  expectedDeliveryDate?: string | null;
+  notes?: string | null;
+  acceptedPrice?: number | null;
+  acceptedQuantity?: number | null;
+  acceptedDeliveryDate?: string | null;
+  validityDays?: number | null;
+  agentAcceptedAt?: string | null;
+  supplierConfirmedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ConversationDetail = {
+  id: string;
+  rfqId?: string | null;
+  type: string;
+  createdAt: string;
+  updatedAt: string;
+  rfq: ConversationRfq | null;
+  supplier: ConversationSupplier | null;
+  product: ConversationProduct | null;
+  participants: ConversationParticipant[];
+  messages: ConversationMessage[];
+  offers: NegotiationOffer[];
+};
+
+export type ConversationListItem = {
+  id: string;
+  rfqId?: string | null;
+  rfqNumber?: string | null;
+  supplier: ConversationSupplier | null;
+  product: ConversationProduct | null;
+  latestMessage: ConversationMessage | null;
+  unreadCount: number;
+  rfqStatus: string;
+  updatedAt: string;
+  createdAt: string;
+};
+
+export type SendMessageDto = {
+  message: string;
+  attachments?: string[];
+  clientMessageId?: string;
+};
+
+export type SendOfferDto = {
+  quantity: number;
+  unitPrice: number;
+  deliveryDate?: string;
+  notes?: string;
+};
+
+export type AcceptOfferDto = {
+  offerId?: string;
+};
+
+export type RejectOfferDto = {
+  reason?: string;
+};
+
+
+
+// types/wholesale.ts — add/replace this section
+// Matches the Prisma enum exactly:
+//
+// enum RfqStatus {
+//   DRAFT
+//   SUBMITTED
+//   UNDER_REVIEW
+//   NEGOTIATING
+//   SUPPLIER_OFFERED
+//   BUYER_COUNTERED
+//   NEGOTIATION_COMPLETED
+//   NEGOTIATION_ACCEPTED
+//   PO_CREATED
+//   CANCELLED
+//   EXPIRED
+// }
+
+export type RfqStatus =
+  | "DRAFT"
+  | "SUBMITTED"
+  | "UNDER_REVIEW"
+  | "NEGOTIATING"
+  | "SUPPLIER_OFFERED"
+  | "BUYER_COUNTERED"
+  | "NEGOTIATION_COMPLETED"
+  | "NEGOTIATION_ACCEPTED"
+  | "PO_CREATED"
+  | "CANCELLED"
+  | "EXPIRED"
+  | "RFQ_RECEIVED"
+  | "PENDING_SUPPLIER_RESPONSE"
+  | "COUNTER_OFFERED"
+  | "AGENT_ACCEPTED_FINAL"
+  | "SUPPLIER_ACCEPTED_FINAL"
+  | "WAITING_SUPPLIER_CONFIRMATION";
+
+export interface RfqStatusConfig {
+  label: string;
+  /** pill background/text/ring classes */
+  color: string;
+  /** dot color class */
+  dot: string;
+  /** whether this status is "in motion" and should pulse */
+  pulse?: boolean;
+}
+
+export const RFQ_STATUS_CONFIG: Record<RfqStatus, RfqStatusConfig> = {
+  DRAFT: {
+    label: "Draft",
+    color: "bg-slate-100 text-slate-600 ring-slate-200",
+    dot: "bg-slate-400",
+  },
+  SUBMITTED: {
+    label: "Submitted",
+    color: "bg-blue-50 text-blue-700 ring-blue-200",
+    dot: "bg-blue-500",
+    pulse: true,
+  },
+  UNDER_REVIEW: {
+    label: "Under Review",
+    color: "bg-amber-50 text-amber-700 ring-amber-200",
+    dot: "bg-amber-500",
+    pulse: true,
+  },
+  NEGOTIATING: {
+    label: "Negotiating",
+    color: "bg-indigo-50 text-indigo-700 ring-indigo-200",
+    dot: "bg-indigo-500",
+    pulse: true,
+  },
+  SUPPLIER_OFFERED: {
+    label: "Supplier Offered",
+    color: "bg-purple-50 text-purple-700 ring-purple-200",
+    dot: "bg-purple-500",
+    pulse: true,
+  },
+  BUYER_COUNTERED: {
+    label: "You Countered",
+    color: "bg-cyan-50 text-cyan-700 ring-cyan-200",
+    dot: "bg-cyan-500",
+    pulse: true,
+  },
+  NEGOTIATION_COMPLETED: {
+    label: "Negotiation Completed",
+    color: "bg-teal-50 text-teal-700 ring-teal-200",
+    dot: "bg-teal-500",
+  },
+  NEGOTIATION_ACCEPTED: {
+    label: "Offer Accepted",
+    color: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+    dot: "bg-emerald-500",
+  },
+  PO_CREATED: {
+    label: "PO Created",
+    color: "bg-green-50 text-green-700 ring-green-200",
+    dot: "bg-green-600",
+  },
+  CANCELLED: {
+    label: "Cancelled",
+    color: "bg-red-50 text-red-700 ring-red-200",
+    dot: "bg-red-500",
+  },
+  EXPIRED: {
+    label: "Expired",
+    color: "bg-zinc-100 text-zinc-500 ring-zinc-200",
+    dot: "bg-zinc-400",
+  },
+  RFQ_RECEIVED: {
+    label: "RFQ Received",
+    color: "bg-blue-50 text-blue-700 ring-blue-200",
+    dot: "bg-blue-500",
+    pulse: true,
+  },
+  PENDING_SUPPLIER_RESPONSE: {
+    label: "Awaiting Response",
+    color: "bg-amber-50 text-amber-700 ring-amber-200",
+    dot: "bg-amber-500",
+    pulse: true,
+  },
+  COUNTER_OFFERED: {
+    label: "Counter Offered",
+    color: "bg-indigo-50 text-indigo-700 ring-indigo-200",
+    dot: "bg-indigo-500",
+    pulse: true,
+  },
+  AGENT_ACCEPTED_FINAL: {
+    label: "Agent Accepted",
+    color: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+    dot: "bg-emerald-500",
+  },
+  SUPPLIER_ACCEPTED_FINAL: {
+    label: "Supplier Accepted",
+    color: "bg-teal-50 text-teal-700 ring-teal-200",
+    dot: "bg-teal-500",
+  },
+  WAITING_SUPPLIER_CONFIRMATION: {
+    label: "Awaiting Confirmation",
+    color: "bg-orange-50 text-orange-700 ring-orange-200",
+    dot: "bg-orange-500",
+    pulse: true,
+  },
+};
+
+export type NegotiationStatus =
+  | "PENDING"
+  | "AGENT_ACCEPTED"
+  | "WAITING_SUPPLIER_CONFIRMATION"
+  | "SUPPLIER_CONFIRMED"
+  | "PO_CREATED"
+  | "REJECTED";
+=======
+>>>>>>> origin/main

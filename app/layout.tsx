@@ -4,6 +4,10 @@ import "leaflet/dist/leaflet.css";
 
 import type { Metadata } from "next";
 import CartFlyAnimation from "@/components/ui/CartFlyAnimation";
+import { SocketProvider } from "@/providers/SocketProvider";
+import { NotificationProvider } from "@/providers/NotificationProvider";
+import { ConversationProvider } from "@/providers/ConversationProvider";
+import { FloatingNotificationBanner } from "@/components/notifications/FloatingNotificationBanner";
 
 export const metadata: Metadata = {
   title: "kompra.ph | Multi-Store Ecommerce",
@@ -25,7 +29,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
-        {children}
+        <SocketProvider><NotificationProvider><ConversationProvider>{children}<FloatingNotificationBanner /></ConversationProvider></NotificationProvider></SocketProvider>
         <CartFlyAnimation />
       </body>
     </html>

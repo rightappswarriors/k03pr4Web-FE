@@ -19,18 +19,10 @@ import {
 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-
-type Notification = {
-  id: number;
-  title: string;
-  message: string;
-  createdat: string;
-  type: string;
-  isread: boolean;
-};
+import { useNotifications, type Notification } from "@/providers/NotificationProvider";
 
 export default function NotificationDropdown() {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const { notifications, unreadCount, replace, markAllRead: updateAllRead, remove } = useNotifications();
  
   const router = useRouter();
 
@@ -42,7 +34,7 @@ export default function NotificationDropdown() {
     try {
       const res = await fetch(`${API_URL}/notifications/?orgId=1`);
       const data = await res.json();
-      setNotifications(data);
+      replace(data);
     } catch (err) {
       console.error("Error fetching notifications:", err);
     }
@@ -52,26 +44,20 @@ export default function NotificationDropdown() {
   useEffect(() => {
     fetchNotifications();
 
-    const interval = setInterval(() => {
-      fetchNotifications();
-    }, 5000);
-
-    return () => clearInterval(interval);
   }, []);
 
   // ✅ UNREAD COUNT
-  const unreadCount = notifications.filter((n) => !n.isread).length;
   const allRead = unreadCount === 0;
   const [hasMarkedAll, setHasMarkedAll] = useState(false);
 
   // ✅ DELETE (FIXED: removed /api)
-  const removeNotification = async (id: number) => {
+  const removeNotification = async (id: number | string) => {
     try {
       await fetch(`${API_URL}/notifications/${id}/`, {
         method: "DELETE",
       });
 
-      fetchNotifications();
+      remove(id);
     } catch (err) {
       console.error("Error deleting notification:", err);
     }
@@ -92,7 +78,7 @@ export default function NotificationDropdown() {
       });
 
       setHasMarkedAll(true); // ✅ mark as clicked
-      fetchNotifications();
+      updateAllRead();
     } catch (err) {
       console.error("Error marking all as read:", err);
     } finally {
@@ -218,7 +204,7 @@ export default function NotificationDropdown() {
 
                     <div className="flex items-center gap-2 mt-2">
                       <span className="text-xs text-gray-400">
-                        {new Date(n.createdat).toLocaleString()}
+                        {new Date(n.createdat ?? n.createdAt ?? Date.now()).toLocaleString()}
                       </span>
 
                       {!n.isread && (

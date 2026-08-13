@@ -22,9 +22,13 @@ function readAuthFromStorage(): {
 
   const agentToken = localStorage.getItem("agent_access_token");
   const storedAgent = localStorage.getItem("agent");
+  const agentRefreshToken = localStorage.getItem("agent_refresh_token");
 
   const hasRetail = !!token && !!storedUser;
-  const hasAgent = !!agentToken && !!storedAgent;
+  // An agent session exists if the access token is present, or if a
+  // refresh token is still available (the client-side hook will
+  // transparently refresh the access token).
+  const hasAgent = (!!agentToken || !!agentRefreshToken) && !!storedAgent;
 
   if (!hasRetail && !hasAgent) {
     return {

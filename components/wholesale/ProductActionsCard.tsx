@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { MessageCircle, ShoppingCart } from "lucide-react";
+import { MessageCircle, ShoppingCart, FileText, Heart, Send } from "lucide-react";
 import SupplierChat from "./SupplierChat";
 import AddToCartModal from "./AddToCartModal";
 import OrderProtectionModal from "./OrderProtectionModal";
+import RequestQuotationDrawer from "./RequestQuotationDrawer";
 import type { WholesaleProduct } from "@/types/wholesale";
 
 type ProductActionsCardProps = {
@@ -15,6 +16,7 @@ export default function ProductActionsCard({ product }: ProductActionsCardProps)
   const [showChat, setShowChat] = useState(false);
   const [showAddToCart, setShowAddToCart] = useState(false);
   const [showProtection, setShowProtection] = useState(false);
+  const [showRfqDrawer, setShowRfqDrawer] = useState(false);
 
   const handleStartOrder = () => {
     // For now, open the AddToCartModal in "buy now" mode
@@ -34,6 +36,15 @@ export default function ProductActionsCard({ product }: ProductActionsCardProps)
         >
           <ShoppingCart className="size-5" />
           Start Order
+        </button>
+
+        {/* Request Quotation - Secondary action */}
+        <button
+          onClick={() => setShowRfqDrawer(true)}
+          className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-3 font-medium text-slate-700 hover:bg-slate-50 mb-3"
+        >
+          <FileText className="size-5" />
+          Request Quotation
         </button>
 
         {/* Chat Now - Secondary action */}
@@ -80,6 +91,11 @@ export default function ProductActionsCard({ product }: ProductActionsCardProps)
       <OrderProtectionModal
         isOpen={showProtection}
         onClose={() => setShowProtection(false)}
+      />
+      <RequestQuotationDrawer
+        product={product}
+        isOpen={showRfqDrawer}
+        onClose={() => setShowRfqDrawer(false)}
       />
     </>
   );

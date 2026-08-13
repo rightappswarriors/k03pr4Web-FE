@@ -1,0 +1,4 @@
+"use client";
+import { useEffect } from "react";
+import { useNotifications } from "@/providers/NotificationProvider";
+export function FloatingNotificationBanner() { const { notifications, remove } = useNotifications(); const visible = notifications.filter((n) => !(n.isRead ?? n.isread)).slice(0, 3); useEffect(() => { const timers = visible.map((n) => setTimeout(() => remove(n.id), 10_000)); return () => timers.forEach(clearTimeout); }, [visible, remove]); return <div className="pointer-events-none fixed right-4 top-4 z-[100] flex w-[min(24rem,calc(100vw-2rem))] flex-col gap-2">{visible.map((n) => <div key={n.id} className="pointer-events-auto animate-in fade-in slide-in-from-top-4 rounded-xl border border-blue-200 bg-white p-4 shadow-xl"><button className="float-right text-gray-400" onClick={() => remove(n.id)}>×</button><p className="font-semibold">{n.title}</p><p className="mt-1 text-sm text-slate-600">{n.message}</p></div>)}</div>; }
