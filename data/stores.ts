@@ -1,0 +1,40 @@
+import { Store } from "@/types/store";
+
+export const stores: Store[] = [
+  {
+    id: "s1",
+    name: "OrangeMart",
+    slug: "orangemart-cebu",
+    address: "Colon Street, Cebu City",
+    latitude: 10.2933,
+    longitude: 123.9019,
+    contactNumber: "+63 912 345 6789",
+    logo: "/img/orangemart.jpg",
+    banner: "/img/orangemart.jpg",
+    branchName: "Cebu Main",
+  },
+  {
+    id: "s2",
+    name: "BlueMall",
+    slug: "bluemall-talisay",
+    address: "Talisay City, Cebu",
+    latitude: 10.2447,
+    longitude: 123.8494,
+    contactNumber: "+63 923 111 2222",
+    logo: "/img/bluemall.jpg",
+    banner: "/img/bluemall.jpg",
+    branchName: "Talisay Branch",
+  },
+  {
+    id: "s3",
+    name: "WhiteBox Deals",
+    slug: "whitebox-ginatilan",
+    address: "Ginatilan, Cebu",
+    latitude: 9.9183,
+    longitude: 123.3189,
+    contactNumber: "+63 955 777 8888",
+    logo: "/img/watsoon.jpg",
+    banner: "/img/watsoon.jpg",
+    branchName: "Ginatilan Branch",
+  },
+];
