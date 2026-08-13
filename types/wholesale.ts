@@ -93,18 +93,28 @@ export type WholesaleProductDetail = {
   description?: string;
   supplier: string;
   supplierVerified: boolean;
+<<<<<<< HEAD
   supplierLocation?: string;
+=======
+  supplierLocation: string;
+>>>>>>> origin/main
   supplierResponseTime?: string;
   supplierCapabilities?: SupplierCapability[];
   priceTiers: ProductPriceTier[];
   moq: string;
+<<<<<<< HEAD
   sku?: string;
   availableQty?: number;
+=======
+>>>>>>> origin/main
   sampleAvailable: boolean;
   samplePrice?: string;
   leadTime: string;
   shippingFrom: string;
+<<<<<<< HEAD
   unit?: string;
+=======
+>>>>>>> origin/main
   category: string;
   verified: boolean;
   totalOrders?: number;
@@ -228,6 +238,7 @@ export type RFQFormData = {
   deliveryDate: string;
   contactMethod: "email" | "phone" | "chat";
 };
+<<<<<<< HEAD
 
 // ============================================
 // RFQ (Request for Quotation) Types
@@ -594,3 +605,5 @@ export type NegotiationStatus =
   | "SUPPLIER_CONFIRMED"
   | "PO_CREATED"
   | "REJECTED";
+=======
+>>>>>>> origin/main
