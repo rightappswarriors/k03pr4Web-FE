@@ -18,7 +18,6 @@ const mockOrders: WholesaleOrder[] = [
   {
 
     id: "order-1",
-
     orderNumber: "WH-2024-00145",
 
     productId: "product-1",

@@ -23,14 +23,14 @@ export default function SenderInfo({
   let email: string | null = null;
   let senderType = explicitSenderType;
 
-  if (message?.senderAgent?.fullname || message?.senderOrg?.name) {
-    fullName = message?.senderAgent?.fullname ?? null;
-    orgName = message?.senderOrg?.name ?? null;
-    email = message?.senderAgent?.email ?? null;
+  if (message?.Agent?.fullname || message?.Organization?.name) {
+    fullName = message?.Agent?.fullname ?? null;
+    orgName = message?.Organization?.name ?? null;
+    email = message?.Agent?.email ?? null;
     senderType = message.senderRole;
-  } else if (offer?.senderAgent?.fullname || offer?.senderOrg?.name) {
-    fullName = offer?.senderAgent?.fullname ?? null;
-    orgName = offer?.senderOrg?.name ?? null;
+  } else if (offer?.Agent?.fullname || offer?.Organization?.name) {
+    fullName = offer?.Agent?.fullname ?? null;
+    orgName = offer?.Organization?.name ?? null;
     senderType = offer.senderType;
   }
 

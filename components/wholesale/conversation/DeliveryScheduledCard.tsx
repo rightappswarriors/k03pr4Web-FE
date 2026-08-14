@@ -36,7 +36,7 @@ export default function DeliveryScheduledCard({ message, onViewTracking }: Deliv
           <div>
             <span className="text-xs text-slate-500">Scheduled Date</span>
             <p className="font-medium text-slate-900">
-              {formatDateSafe(scheduledDate, { weekday: "short", year: "numeric", month: "short", day: "numeric" })}
+              {formatDateSafe(scheduledDate, "en-PH", { weekday: "short", year: "numeric", month: "short", day: "numeric" })}
             </p>
           </div>
         </div>

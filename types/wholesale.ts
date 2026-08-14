@@ -327,10 +327,13 @@ export type ConversationMessage = {
   conversationId: string;
   senderId: string;
   senderName: string;
+  senderOrgId?: number;
   senderRole: ConversationRole;
   message: string;
   type: string;
   attachments: string[];
+  Organization?: { name: string }
+  Agent?: { fullname: string, email: string}
   createdAt: string;
   clientMessageId?: string | null;
   metadata?: Record<string, any> | null;
@@ -348,6 +351,10 @@ export type NegotiationOffer = {
   status: NegotiationOfferStatus;
   createdAt: string;
   updatedAt: string;
+  estimatedLeadTime?: string
+  validUntil?: string
+  Organization?: { name: string }
+  Agent?: { fullname: string, email: string}
 };
 
 export type ConversationSupplier = {
@@ -478,8 +485,8 @@ export type RfqStatus =
   | "COUNTER_OFFERED"
   | "AGENT_ACCEPTED_FINAL"
   | "SUPPLIER_ACCEPTED_FINAL"
-  | "WAITING_SUPPLIER_CONFIRMATION";
-
+  | "WAITING_SUPPLIER_CONFIRMATION"
+  | "NEGOTIATION_REJECTED";
 export interface RfqStatusConfig {
   label: string;
   /** pill background/text/ring classes */
@@ -543,6 +550,11 @@ export const RFQ_STATUS_CONFIG: Record<RfqStatus, RfqStatusConfig> = {
   },
   CANCELLED: {
     label: "Cancelled",
+    color: "bg-red-50 text-red-700 ring-red-200",
+    dot: "bg-red-500",
+  },
+  NEGOTIATION_REJECTED: {
+    label: "Offer Rejected",
     color: "bg-red-50 text-red-700 ring-red-200",
     dot: "bg-red-500",
   },

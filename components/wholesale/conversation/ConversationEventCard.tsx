@@ -41,7 +41,7 @@ export interface ConversationEventCardProps {
 function offerFromMessage(message: ConversationMessage): NegotiationOffer {
   const meta = message.metadata ?? {};
   return {
-    id: message.rfqOfferId ?? message.id,
+    id: message.id,
     conversationId: message.conversationId,
     senderType: message.senderRole,
     senderName: message.senderName,

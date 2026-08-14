@@ -16,9 +16,9 @@ export const registerAgent = async (data: {
   dateOfBirth: string;
   gender: "MALE" | "FEMALE" | "OTHER";
   address: string;
-  city: string;
-  province: string;
-  zipCode: string;
+  city: string | null;
+  province: string | null;
+  zipCode: string | null;
   civilStatus?: "SINGLE" | "MARRIED" | "DIVORCED" | "WIDOWED";
   emergencyContact?: string;
   agentType: ProcurementAgentType;

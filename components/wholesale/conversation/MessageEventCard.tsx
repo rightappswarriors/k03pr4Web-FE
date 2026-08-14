@@ -41,9 +41,9 @@ export default function MessageEventCard({
   const showHeader = position === "single" || position === "first";
 
   const displayName = resolveSenderName({
-    fullName: message.senderAgent?.fullname ?? message.senderName ?? null,
-    organizationName: message.senderOrg?.name ?? null,
-    email: message.senderAgent?.email ?? null,
+    fullName:  message.senderName ?? null,
+    organizationName: message.Organization?.name ?? null,
+    email: message.Agent?.email ?? null,
     senderType: message.senderRole,
   });
 
