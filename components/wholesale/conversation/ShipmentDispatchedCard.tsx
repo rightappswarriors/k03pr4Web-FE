@@ -56,7 +56,7 @@ export default function ShipmentDispatchedCard({ message, onViewTracking }: Ship
           <div>
             <span className="text-xs text-slate-500">Dispatched At</span>
             <p className="font-medium text-slate-900">
-              {formatDateSafe(dispatchedAt, { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+              {formatDateSafe(dispatchedAt, 'en-PH',{ year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
             </p>
           </div>
         </div>
@@ -67,7 +67,7 @@ export default function ShipmentDispatchedCard({ message, onViewTracking }: Ship
             <div>
               <span className="text-xs text-slate-500">Estimated Delivery</span>
               <p className="font-medium text-slate-900">
-                {formatDateSafe(deliveryDate, { weekday: "short", year: "numeric", month: "short", day: "numeric" })}
+                {formatDateSafe(deliveryDate, 'en-PH', { weekday: "short", year: "numeric", month: "short", day: "numeric" })}
               </p>
             </div>
           </div>

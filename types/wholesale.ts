@@ -353,6 +353,8 @@ export type NegotiationOffer = {
   updatedAt: string;
   estimatedLeadTime?: string
   validUntil?: string
+  Organization?: { name: string }
+  Agent?: { fullname: string, email: string}
 };
 
 export type ConversationSupplier = {
