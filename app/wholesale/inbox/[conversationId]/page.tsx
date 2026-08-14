@@ -615,7 +615,7 @@ export default function ConversationPage() {
                               key={row.key}
                               event={row.event}
                               isLatestOffer={isLatestOffer}
-                              messagePosition={row.messagePosition}
+                          //    messagePosition={row.messagePosition}
                               supplierName={supplierName}
                               buyerName={buyerName}
                               onAcceptOffer={handleAcceptOffer}

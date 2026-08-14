@@ -101,6 +101,7 @@ export default function ProcurementAgentRegisterPage() {
     agreeToTerms: false,
     agreeToPrivacy: false,
     agreeToMarketplace: false,
+    
   });
 
   const fieldClass =
@@ -161,13 +162,6 @@ export default function ProcurementAgentRegisterPage() {
   };
 
   // Validate invitation with real API
-  const handleValidateInvitation = async (code: string): Promise<ValidateInvitationResponse> => {
-    const result = await validateInvitation(code);
-    if (!result.valid) {
-      return { valid: false, error: result.error };
-    }
-    return result;
-  };
 
   const submitRegistration = async () => {
     setIsSubmitting(true);
@@ -193,9 +187,9 @@ export default function ProcurementAgentRegisterPage() {
         dateOfBirth: form.dateOfBirth,
         gender: form.gender as "MALE" | "FEMALE" | "OTHER",
         address: form.address,
-        city: form.city || "",
-        province: form.province || "",
-        zipCode: form.zipCode || "",
+        city: "",
+        province: "",
+        zipCode:  "",
         civilStatus: form.civilStatus as any,
         emergencyContact: form.emergencyContact,
         agentType: form.agentType,
