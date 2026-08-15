@@ -105,7 +105,7 @@ export default function WholesaleProductPage() {
     product.shippingInfo.estimatedDays ||
     product.shippingInfo.shippingNotes
   );
-
+  console.log("Product: image", product)
   // Helper to check if there are customizations
   const hasCustomizations = product.customizations && product.customizations.length > 0;
 
@@ -131,7 +131,15 @@ export default function WholesaleProductPage() {
           <div className="lg:col-span-2 space-y-6">
             {/* Gallery */}
             <ProductGallery
-              images={product.supplierItemImage?.length ? product.supplierItemImage : (product.images?.length ? product.images : [])}
+              images={
+                product.supplierItemImage?.length
+                  ? product.supplierItemImage
+                  : product.images?.length
+                    ? product.images
+                    : product.image
+                      ? [product.image]
+                      : []
+              }
               productName={product.name}
               variants={hasVariants ? product.variants : undefined}
             />
