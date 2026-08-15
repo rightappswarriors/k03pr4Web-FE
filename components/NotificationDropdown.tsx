@@ -33,8 +33,14 @@ export default function NotificationDropdown() {
   const fetchNotifications = async () => {
     try {
       const res = await fetch(`${API_URL}/notifications/?orgId=1`);
+      if (!res.ok) return; // non-2xx — leave existing notifications untouched
       const data = await res.json();
-      replace(data);
+      // The API must return an array; if it returns something else
+      // (e.g. { error: "..." } for a standalone agent with no org),
+      // silently bail out rather than crashing .filter() downstream.
+      if (Array.isArray(data)) {
+        replace(data);
+      }
     } catch (err) {
       console.error("Error fetching notifications:", err);
     }

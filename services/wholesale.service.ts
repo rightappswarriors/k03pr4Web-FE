@@ -63,10 +63,17 @@ export const wholesaleApi = {
     publicFetch(`/search/suggest?q=${encodeURIComponent(term)}`),
 
   getFrequentlySearchedProducts: (): Promise<WholesaleProduct[]> =>
-    publicFetch(`/frequently-searched-products`),
+    publicFetch(`/search/frequently-searched-products`),
 
-  trackSearch: (term: string): Promise<{ logged: boolean }> =>
-    publicFetch(`/search/track`),
+  trackSearch: async (term: string): Promise<{ logged: boolean }> => {
+    const res = await fetch(`${API_BASE}/wholesale/search/track`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ term }),
+    });
+    if (!res.ok) return { logged: false };
+    return res.json() as Promise<{ logged: boolean }>;
+  },
 
   getProductsByIds: (ids: string[]): Promise<WholesaleProduct[]> =>
     ids.length ? publicFetch(`/products/by-ids?ids=${ids.join(",")}`) : Promise.resolve([]),
