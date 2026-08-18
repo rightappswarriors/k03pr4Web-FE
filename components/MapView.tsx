@@ -110,14 +110,20 @@ export default function MapView({
           ],
         }}
       >
-        {/* User's own pulsing location dot */}
+        {/* User's own pulsing location dot, labeled "Me" so it's clearly
+            distinguishable from numbered outlet pins. */}
         <OverlayView
           position={{ lat: coords.lat, lng: coords.lng }}
           mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
         >
-          <div className="relative flex items-center justify-center -translate-x-1/2 -translate-y-1/2">
-            <span className="absolute h-6 w-6 rounded-full bg-blue-500 opacity-75 animate-ping" />
-            <span className="relative h-3.5 w-3.5 rounded-full bg-blue-500 border-2 border-white shadow" />
+          <div className="relative flex flex-col items-center -translate-x-1/2 -translate-y-1/2">
+            <span className="mb-1.5 rounded-full bg-blue-500 px-2 py-0.5 text-[10px] font-semibold text-white shadow whitespace-nowrap">
+              Me
+            </span>
+            <span className="relative flex items-center justify-center">
+              <span className="absolute h-6 w-6 rounded-full bg-blue-500 opacity-75 animate-ping" />
+              <span className="relative h-3.5 w-3.5 rounded-full bg-blue-500 border-2 border-white shadow" />
+            </span>
           </div>
         </OverlayView>
 
