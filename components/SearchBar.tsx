@@ -57,6 +57,23 @@ export default function SearchBar({
     }
   }, [initialQuery]);
 
+  useEffect(() => {
+    const handleScroll = () => {
+      if (isOpen) {
+        close();
+        if (document.activeElement instanceof HTMLInputElement) {
+          document.activeElement.blur();
+        }
+      }
+    };
+
+    document.addEventListener("scroll", handleScroll, { capture: true, passive: true });
+
+    return () => {
+      document.removeEventListener("scroll", handleScroll, { capture: true });
+    };
+  }, [isOpen, close]);
+
   const goToProduct = (item: SearchSuggestion) => {
     close();
     setQuery(item.item_name);
