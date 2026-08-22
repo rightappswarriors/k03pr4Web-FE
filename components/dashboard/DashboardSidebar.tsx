@@ -27,7 +27,7 @@ const sidebarItems: SidebarItem[] = [
   { label: "Products", href: "/wholesale/products", icon: Package },
   { label: "Inbox", href: "/wholesale/inbox", icon: MessageSquare },
   { label: "My RFQs", href: "/wholesale/rfqs", icon: FileText },
-  { label: "My Orders", href: "/wholesale/orders", icon: ShoppingCart },
+  { label: "Purchase Orders", href: "/wholesale/orders", icon: ShoppingCart },
   { label: "Suppliers", href: "/wholesale/suppliers", icon: Truck },
   { label: "Settings", href: "/wholesale/settings", icon: Settings },
 ];

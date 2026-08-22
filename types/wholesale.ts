@@ -336,6 +336,8 @@ export type ConversationMessage = {
   Agent?: { fullname: string, email: string}
   createdAt: string;
   clientMessageId?: string | null;
+  // Event-card metadata is intentionally heterogeneous; individual cards narrow it by event type.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   metadata?: Record<string, any> | null;
 };
 
@@ -448,6 +450,13 @@ export type AcceptOfferDto = {
 export type RejectOfferDto = {
   reason?: string;
 };
+
+export type POStatus = "PENDING" | "ACCEPTED" | "REJECTED" | "IN_TRANSIT" | "DELIVERED" | "CANCELLED";
+export type POPaymentStatus = "PENDING" | "PARTIAL" | "PAID" | "REFUNDED";
+export type PurchaseOrderRfq = { id: string; rfqNumber: string; status: string; agentId?: string; acceptedPrice?: number | null; acceptedQuantity?: number | null; acceptedDeliveryDate?: string | null; notes?: string | null };
+export type PurchaseOrderLineItem = { id: string; supplierItemId: string; qty: number; unitPrice: number; subtotal: number; itemName: string; itemSku: string; itemDescription: string; supplierItem: { id: string; name: string; sku?: string | null; image?: string | null; unit?: string | null } };
+export type PurchaseOrderDelivery = { id?: string; scheduledDate: string; deliveredAt?: string | null; status: string; driverName?: string | null; driverContact?: string | null; latitude?: number | null; longitude?: number | null; address?: string | null; notes?: string | null };
+export type PurchaseOrder = { id: string; poNumber: string; status: POStatus; paymentStatus: POPaymentStatus; totalAmount: number; vatAmount: number; createdAt: string; updatedAt: string; requestedDate?: string | null; notes?: string | null; rejectionReason?: string | null; paymentMethod?: "CARD" | "CASH" | "E_WALLET" | null; paymentReference?: string | null; paymentPreparedAt?: string | null; receiptSnapshot?: Record<string, unknown> | null; supplier: ConversationSupplier | null; rfqs: PurchaseOrderRfq[]; lineItems: PurchaseOrderLineItem[]; delivery: PurchaseOrderDelivery | null; conversation?: { id: string; messages: ConversationMessage[] } | null };
 
 
 

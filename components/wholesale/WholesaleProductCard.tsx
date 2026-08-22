@@ -4,6 +4,7 @@ import { memo } from "react";
 import Link from "next/link";
 import { BadgeCheck, MapPin, Timer } from "lucide-react";
 import type { WholesaleProduct } from "@/types/wholesale";
+import { formatPrice } from "@/lib/utils";
 
 export function MOQBadge({ children }: { children: React.ReactNode }) {
   return <span className="text-xs text-slate-500">MOQ: {children}</span>;
@@ -40,7 +41,7 @@ const WholesaleProductCard = memo(function WholesaleProductCard({ product }: { p
       </Link>
       <h3 className="mt-3 line-clamp-2 min-h-10 text-sm font-bold text-slate-900">{product.name}</h3>
       <p className="mt-1 text-base font-black text-slate-950">
-        {product.price} <span className="text-xs font-normal text-slate-500">/ {product.unit}</span>
+        {product.price ? formatPrice(Number(product.price)) : "Price not available"} <span className="text-xs font-normal text-slate-500">/ {product.unit}</span>
       </p>
       <MOQBadge>{product.moq}</MOQBadge>
       <div className="mt-3 flex items-center justify-between">
