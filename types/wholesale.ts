@@ -449,6 +449,12 @@ export type RejectOfferDto = {
   reason?: string;
 };
 
+export type PaginatedProducts = {
+  data: WholesaleProduct[];
+  total: number;
+  hasMore: boolean;
+};
+
 
 
 // types/wholesale.ts — add/replace this section

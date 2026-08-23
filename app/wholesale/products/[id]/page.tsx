@@ -16,6 +16,7 @@ import ProductTabs from "@/components/wholesale/ProductTabs";
 import WholesaleBreadcrumb from "@/components/wholesale/WholesaleBreadcrumb";
 import { wholesaleApi } from "@/services/wholesale.service";
 import type { WholesaleProduct } from "@/types/wholesale";
+import { trackProductView } from "@/lib/recentlyViewed";
 
 function ProductDetailSkeleton() {
   return (
@@ -65,6 +66,7 @@ export default function WholesaleProductPage() {
           setError(true);
         } else {
           setProduct(data);
+          trackProductView(productId);
         }
       })
       .catch(() => setError(true))
@@ -105,7 +107,6 @@ export default function WholesaleProductPage() {
     product.shippingInfo.estimatedDays ||
     product.shippingInfo.shippingNotes
   );
-  console.log("Product: image", product)
   // Helper to check if there are customizations
   const hasCustomizations = product.customizations && product.customizations.length > 0;
 

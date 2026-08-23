@@ -6,6 +6,8 @@ import WholesaleProductCard from "./WholesaleProductCard";
 import type { WholesaleProduct } from "@/types/wholesale";
 
 export default function ProductCarousel({ title, products, viewAllHref = "/products" }: { title: string; products: WholesaleProduct[]; viewAllHref?: string }) {
+  if (products.length === 0) return null;
+
   return (
     <section id="recommended-products">
       <div className="mb-4 flex items-center justify-between">
@@ -20,11 +22,20 @@ export default function ProductCarousel({ title, products, viewAllHref = "/produ
           View all products <ArrowRight className="ml-1 size-4" aria-hidden="true" />
         </Link>
       </div>
-      <div className="flex snap-x gap-4 overflow-x-auto pb-3 [scrollbar-width:none]" role="region" aria-label={`${title} products`}>
-        {products.map((product) => (
-          <WholesaleProductCard key={product.id} product={product} />
-        ))}
-      </div>
+
+      {/* Single item: plain card, no scroll container per spec.
+          Multiple items: horizontal scroll carousel, unchanged. */}
+      {products.length === 1 ? (
+        <div className="flex">
+          <WholesaleProductCard product={products[0]} />
+        </div>
+      ) : (
+        <div className="flex snap-x gap-4 overflow-x-auto pb-3 [scrollbar-width:none]" role="region" aria-label={`${title} products`}>
+          {products.map((product) => (
+            <WholesaleProductCard key={product.id} product={product} />
+          ))}
+        </div>
+      )}
     </section>
   );
 }

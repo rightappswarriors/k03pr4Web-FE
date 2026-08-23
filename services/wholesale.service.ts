@@ -8,6 +8,7 @@ import type {
   WholesaleQuote,
   RFQFormData,
   PricingQuote,
+  PaginatedProducts,
 } from "@/types/wholesale";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
@@ -28,10 +29,22 @@ export const wholesaleApi = {
   getProducts: async (params?: Record<string, string>): Promise<WholesaleProduct[]> => {
     const qs = params ? `?${new URLSearchParams(params)}` : "";
     try {
-      return await publicFetch(`/products${qs}`);
+      const res = await publicFetch<PaginatedProducts>(`/products${qs}`);
+      return res.data;
     } catch (err) {
       console.error("getProducts failed:", err);
       return []; // let the page render empty/loading state instead of crashing
+    }
+  },
+
+  // New: paginated fetch for infinite scroll — exposes total/hasMore for the caller to track state
+  getProductsPaginated: async (params?: Record<string, string>): Promise<PaginatedProducts> => {
+    const qs = params ? `?${new URLSearchParams(params)}` : "";
+    try {
+      return await publicFetch<PaginatedProducts>(`/products${qs}`);
+    } catch (err) {
+      console.error("getProductsPaginated failed:", err);
+      return { data: [], total: 0, hasMore: false };
     }
   },
 
@@ -81,8 +94,10 @@ export const wholesaleApi = {
   getRecommendations: (): Promise<WholesaleProduct[]> =>
     publicFetch(`/home`).then((d: any) => d.recommendations),
 
-  search: (term: string): Promise<WholesaleProduct[]> =>
-    publicFetch(`/products?search=${encodeURIComponent(term)}`),
+  search: async (term: string): Promise<WholesaleProduct[]> => {
+    const res = await publicFetch<PaginatedProducts>(`/products?search=${encodeURIComponent(term)}`);
+    return res.data;
+  },
 
   getQuotes: (): Promise<WholesaleQuote[]> =>
     publicFetch(`/quotes`),

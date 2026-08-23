@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { formatProductPrice } from "@/lib/utils";
 import type { WholesaleProduct } from "@/types/wholesale";
 
 export default function RecommendationCard({ products, title }: { products: WholesaleProduct[]; title?: string }) {
@@ -25,7 +26,7 @@ export default function RecommendationCard({ products, title }: { products: Whol
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-bold text-slate-900">{product.name}</p>
                 <p className="mt-1 text-xs text-slate-500">
-                  {product.price} / {product.unit}
+                  {formatProductPrice(product.price)} / {product.unit}
                 </p>
               </div>
             </div>
