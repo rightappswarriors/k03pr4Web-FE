@@ -1,0 +1,2 @@
+'use client';
+import Link from 'next/link'; export default function PaymentCancelPage() { return <main className="mx-auto max-w-lg p-10 text-center"><h1 className="text-2xl font-bold">Payment Not Completed</h1><p className="mt-3 text-slate-600">No payment has been confirmed. You may return to the purchase order and try again.</p><Link className="mt-6 inline-block underline" href="/wholesale/orders">Return to Purchase Order</Link></main>; }
