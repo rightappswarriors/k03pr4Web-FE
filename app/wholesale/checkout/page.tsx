@@ -501,13 +501,9 @@ export default function WholesaleCheckoutPage() {
                 </button>
 
                 <button
-
                   onClick={() => setStep("payment")}
-
-                  className="flex-1 rounded-lg bg-emerald-600 py-2 font-medium text-white hover:bg-emerald-700"
-
+                  className="flex-1 rounded-lg bg-emerald-600 py-2 cursor-pointer font-medium text-white hover:bg-emerald-700"
                 >
-
                   Continue to Payment
 
                 </button>

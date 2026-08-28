@@ -9,8 +9,8 @@ const EXIT_MS = 250;
 
 type NotificationKind = "message" | "success" | "rfq" | "default";
 
-function getKind(title: string): NotificationKind {
-  const t = title.toLowerCase();
+function getKind(title?: string | null): NotificationKind {
+  const t = (title ?? "").toLowerCase();
   if (t.includes("message")) return "message";
   if (t.includes("accepted") || t.includes("created")) return "success";
   if (t.includes("rfq")) return "rfq";
@@ -70,7 +70,7 @@ export function FloatingNotificationBanner() {
               className="min-w-0 flex-1 text-left"
               onClick={() => n.deepLink && router.push(n.deepLink)}
             >
-              <p className="truncate text-sm font-semibold text-slate-900">{n.title}</p>
+              <p className="truncate text-sm font-semibold text-slate-900">{n.title ?? "Notification"}</p>
               <p className="mt-0.5 line-clamp-2 text-sm leading-snug text-slate-500">{n.message}</p>
             </button>
             <button

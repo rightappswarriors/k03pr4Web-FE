@@ -1,10 +1,11 @@
 // components/MapView.tsx
 "use client";
 
-import { GoogleMap, OverlayView, useJsApiLoader } from "@react-google-maps/api";
+import { GoogleMap, OverlayView } from "@react-google-maps/api";
 import { useCallback, useEffect, useState } from "react";
 import { Locate } from "lucide-react";
 import { useGeolocation } from "@/hooks/useGeolocation";
+import { useGoogleMapsLoader } from "@/hooks/useGoogleMapsLoader";
 
 const containerStyle = {
   width: "100%",
@@ -39,9 +40,7 @@ export default function MapView({
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [hoveredPinId, setHoveredPinId] = useState<number | null>(null);
 
-  const { isLoaded } = useJsApiLoader({
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_WEB_KEY || "",
-  });
+  const { isLoaded } = useGoogleMapsLoader();
 
   useEffect(() => {
     if (status === "idle") {
