@@ -1,7 +1,6 @@
 // hooks/useWholesalePricing.ts
 // Client-side mirror of the bracket pricing rule for optimistic UI
-// IMPORTANT: Keep this logic in sync with wholesale.service.ts:computeBracketPrice
-
+// IMPORTANT: Keep this logic in sync with wholesale.service.ts:priceQuote
 import { useCallback } from "react";
 
 export type PriceTier = {
@@ -67,26 +66,29 @@ export function useWholesalePricing() {
     hasVariants: boolean,
     variantPrice?: number
   ): PriceQuote => {
-    // If variant price is provided, use flat variant price (ignore tiers)
-    if (hasVariants && variantPrice !== undefined) {
-      return {
-        unitPrice: variantPrice,
-        subtotal: variantPrice * quantity,
-        tierApplied: null,
-      };
-    }
-
-    // Validate MOQ
+    // MOQ always applies — item-level MOQ, whether or not a variant is selected
     if (quantity < moq) {
       throw new Error(`Minimum order quantity is ${moq}`);
     }
 
-    // Validate stock (optimistic - will be re-validated server-side)
+    // Inventory check — variant's availableQty when a variant is selected,
+    // otherwise the base item's availableQty (caller passes the right one in)
     if (quantity > availableQty) {
       throw new Error(`Only ${availableQty} units available in stock`);
     }
 
+    // Tier resolves the same way whether or not a variant is selected;
+    // variantPrice is only a fallback when no tier matches.
     const tierApplied = computeBracketPrice(quantity, priceTiers);
+
+    if (hasVariants && variantPrice !== undefined) {
+      const unitPrice = tierApplied?.price ?? variantPrice;
+      return {
+        unitPrice,
+        subtotal: unitPrice * quantity,
+        tierApplied,
+      };
+    }
 
     if (!tierApplied && priceTiers.length === 0) {
       // No tiers defined, caller should use unitPrice from product

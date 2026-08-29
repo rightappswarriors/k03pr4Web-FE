@@ -5,6 +5,7 @@ import { X, ShoppingCart, Plus, Minus, Shield, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { wholesaleApi } from "@/services/wholesale.service";
 import { useDialogBehavior } from "@/hooks/useDialogBehavior";
+import { formatPrice } from "@/lib/utils";
 import type { WholesaleProduct } from "@/types/wholesale";
 
 type PricingData = {
@@ -80,6 +81,10 @@ export default function AddToCartModal({
   const [pricing, setPricing] = useState<PricingData | null>(null);
   const [loading, setLoading] = useState(false);
   const [lines, setLines] = useState<CartLine[]>([]);
+  // Raw text the user is currently typing per line, kept separate from the
+  // committed/clamped `quantity` so the field always shows exactly what was
+  // typed (including "0") instead of a computed value that can vanish mid-type.
+  const [qtyDrafts, setQtyDrafts] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -106,7 +111,7 @@ export default function AddToCartModal({
     try {
       localStorage.setItem("wholesale_cart", JSON.stringify(items));
       window.dispatchEvent(new CustomEvent("wholesale-cart-updated"));
-    } catch {}
+    } catch { }
   }, []);
 
   // Fetch pricing data on open
@@ -118,6 +123,36 @@ export default function AddToCartModal({
       .getPricing(productId)
       .then((data) => {
         setPricing(data);
+        // Products without variants have no dropdown to trigger handleAddLine,
+        // so auto-add the base tiered-pricing line once pricing is known.
+        if (data.variants.length === 0) {
+          const moq = data.supplierItem.moq;
+          wholesaleApi
+            .priceQuote(data.supplierItem.id, { quantity: moq })
+            .then((quote) => {
+              setLines([{
+                key: `${data.supplierItem.id}::base`,
+                variantId: null,
+                label: data.supplierItem.name,
+                thumbnail: data.supplierItem.image,
+                quantity: moq,
+                unitPrice: quote.unitPrice,
+                subtotal: quote.subtotal,
+              }]);
+            })
+            .catch(() => {
+              const unitPrice = data.supplierItem.unitPrice;
+              setLines([{
+                key: `${data.supplierItem.id}::base`,
+                variantId: null,
+                label: data.supplierItem.name,
+                thumbnail: data.supplierItem.image,
+                quantity: moq,
+                unitPrice,
+                subtotal: unitPrice * moq,
+              }]);
+            });
+        }
       })
       .catch(() => {
         setPricing({
@@ -225,10 +260,16 @@ export default function AddToCartModal({
   // Remove a line
   const removeLine = (key: string) => {
     setLines(prev => prev.filter(l => l.key !== key));
-  };
+    setQtyDrafts(prev => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+   };
 
-  // Handle quantity stepper change
-  const handleQuantityChange = (key: string, delta: number) => {
+  // Handle quantity stepper change — refetch the quote so crossing a tier
+  // boundary via +/- updates price immediately, not just on blur.
+  const handleQuantityChange = async (key: string, delta: number) => {
     const line = lines.find(l => l.key === key);
     if (!line || !pricing) return;
 
@@ -238,21 +279,57 @@ export default function AddToCartModal({
       : pricing.variants.find(v => v.id === line.variantId)?.availableQty ?? 999999;
 
     const newQty = Math.max(moq, Math.min(availableQty, line.quantity + delta));
-    updateLineQuantity(key, newQty, line.unitPrice);
+
+    try {
+      const quote = await wholesaleApi.priceQuote(pricing.supplierItem.id, {
+        quantity: newQty,
+        variantId: line.variantId ?? undefined,
+      });
+      updateLineQuantity(key, newQty, quote.unitPrice);
+    } catch {
+      updateLineQuantity(key, newQty, line.unitPrice);
+    }
   };
 
-  // Handle text input change
+
+  // Handle text input change — only allow digits through to the draft (so
+  // "abc" can't get typed), and only clamp against availableQty as a ceiling
+  // (so a wildly out-of-range number can't sit there indefinitely). MOQ is
+  // enforced on blur, not here, so the user isn't fought while still typing.
   const handleQtyTextChange = (key: string, value: string) => {
-    setLines(prev => prev.map(l => l.key === key ? { ...l, quantity: parseInt(value) || 0 } : l));
-  };
+    const line = lines.find(l => l.key === key);
+    if (!line || !pricing) return;
 
+    // Reject non-digit characters outright, but let the field be empty.
+    if (value !== "" && !/^\d+$/.test(value)) return;
+
+    const availableQty = line.variantId === null
+      ? pricing.supplierItem.availableQty
+      : pricing.variants.find(v => v.id === line.variantId)?.availableQty ?? 999999;
+
+    if (value === "") {
+      setQtyDrafts(prev => ({ ...prev, [key]: "" }));
+      return;
+    }
+
+    const parsed = parseInt(value, 10);
+    if (parsed > availableQty) {
+      // Ceiling only — clamp the draft itself so the field can't display
+      // something wildly out of range while typing.
+      setQtyDrafts(prev => ({ ...prev, [key]: String(availableQty) }));
+      return;
+    }
+
+    setQtyDrafts(prev => ({ ...prev, [key]: value }));
+  };
   const handleQtyBlur = async (key: string) => {
     const line = lines.find(l => l.key === key);
     if (!line || !pricing) return;
 
     lineFocusRef.current[key] = false;
 
-    let newQty = line.quantity;
+    const draft = qtyDrafts[key];
+    let newQty = draft !== undefined ? (parseInt(draft, 10) || 0) : line.quantity;
     const moq = line.variantId === null ? pricing.supplierItem.moq : 1;
     const availableQty = line.variantId === null
       ? pricing.supplierItem.availableQty
@@ -260,6 +337,14 @@ export default function AddToCartModal({
 
     // Clamp and fetch fresh quote
     newQty = Math.max(moq, Math.min(availableQty, newQty || moq));
+
+    // Draft is no longer needed once committed — clear it so the field
+    // falls back to displaying the real `quantity` on the next render.
+    setQtyDrafts(prev => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
 
     if (line.variantId === null) {
       try {
@@ -312,7 +397,7 @@ export default function AddToCartModal({
       try {
         const token = localStorage.getItem("access_token");
         isAuthenticated = !!token;
-      } catch {}
+      } catch { }
 
       if (isAuthenticated) {
         // Authenticated: call server endpoint for each item
@@ -397,17 +482,16 @@ export default function AddToCartModal({
                 {priceTiers.map((tier, index) => (
                   <div
                     key={tier.id}
-                    className={`rounded-lg p-3 text-center ${
-                      index === activeTierIndex
-                        ? "border-2 border-emerald-600 bg-emerald-50"
-                        : "border border-slate-200"
-                    }`}
+                    className={`rounded-lg p-3 text-center ${index === activeTierIndex
+                      ? "border-2 border-emerald-600 bg-emerald-50"
+                      : "border border-slate-200"
+                      }`}
                   >
                     <div className="text-xs font-medium text-slate-600 mb-1">
                       {tierLabel(tier)}
                     </div>
                     <div className="text-lg font-bold text-slate-900">
-                      ₱{tier.price.toLocaleString()}
+                      {formatPrice(tier.price)}
                     </div>
                     <div className="text-xs text-slate-500">/ {tier.currency}</div>
                   </div>
@@ -448,7 +532,7 @@ export default function AddToCartModal({
                 <option value="base">Original / {supplierItem.name} (Tiered Pricing)</option>
                 {variants.map((variant) => (
                   <option key={variant.id} value={variant.id}>
-                    {variant.name || variant.optionIds.join(" / ")} - ₱{variant.price.toLocaleString()}
+                    {variant.name || variant.optionIds.join(" / ")} - {formatPrice(variant.price)}
                   </option>
                 ))}
               </select>
@@ -478,7 +562,7 @@ export default function AddToCartModal({
                         <div>
                           <p className="font-medium text-slate-900">{line.label}</p>
                           <p className="text-sm text-slate-500">
-                            ₱{line.unitPrice.toLocaleString()} per unit
+                            {formatPrice(line.unitPrice)} per unit
                           </p>
                         </div>
                       </div>
@@ -503,10 +587,13 @@ export default function AddToCartModal({
                         </button>
                         <input
                           type="number"
-                          value={line.quantity}
+                          value={qtyDrafts[line.key] ?? line.quantity}
                           onChange={(e) => handleQtyTextChange(line.key, e.target.value)}
                           onBlur={() => handleQtyBlur(line.key)}
-                          onFocus={() => { lineFocusRef.current[line.key] = true; }}
+                          onFocus={() => {
+                            lineFocusRef.current[line.key] = true;
+                            setQtyDrafts(prev => ({ ...prev, [line.key]: String(line.quantity) }));
+                          }}
                           min={moq}
                           max={availableQty}
                           className="w-16 rounded-lg border border-slate-300 px-2 py-1 text-center"
@@ -521,7 +608,7 @@ export default function AddToCartModal({
                       </div>
                     </div>
                     <p className="mt-2 text-right text-sm font-medium text-slate-900">
-                      Subtotal: ₱{line.subtotal.toLocaleString()}
+                      Subtotal: {formatPrice(line.subtotal)}
                     </p>
                   </div>
                 );
@@ -534,7 +621,7 @@ export default function AddToCartModal({
             <div className="flex items-center justify-between mb-4">
               <span className="text-lg font-semibold text-slate-900">Total</span>
               <span className="text-2xl font-bold text-emerald-600">
-                ₱{totalSubtotal.toLocaleString()}
+                {formatPrice(totalSubtotal)}
               </span>
             </div>
 
