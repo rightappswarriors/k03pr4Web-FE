@@ -1,6 +1,8 @@
 "use client";
 
+import { useRef } from "react";
 import { X, Shield, Lock, Package, RefreshCw, HelpCircle, Database } from "lucide-react";
+import { useDialogBehavior } from "@/hooks/useDialogBehavior";
 
 type OrderProtectionModalProps = {
   isOpen: boolean;
@@ -8,6 +10,9 @@ type OrderProtectionModalProps = {
 };
 
 export default function OrderProtectionModal({ isOpen, onClose }: OrderProtectionModalProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  useDialogBehavior({ isOpen, onClose, panelRef });
+
   if (!isOpen) return null;
 
   const sections = [
@@ -45,8 +50,17 @@ export default function OrderProtectionModal({ isOpen, onClose }: OrderProtectio
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="relative rounded-xl bg-white p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="order-protection-title"
+        className="relative rounded-xl bg-white p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+      >
         {/* Close button */}
         <button
           onClick={onClose}
@@ -60,7 +74,9 @@ export default function OrderProtectionModal({ isOpen, onClose }: OrderProtectio
         <div className="mb-6">
           <div className="flex items-center gap-3 mb-2">
             <Shield className="size-8 text-emerald-600" />
-            <h2 className="text-2xl font-bold text-slate-900">Order Protection</h2>
+            <h2 id="order-protection-title" className="text-2xl font-bold text-slate-900">
+              Order Protection
+            </h2>
           </div>
           <p className="text-slate-600">
             Your wholesale purchases are protected by our platform guarantees.
