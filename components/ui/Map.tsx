@@ -1,6 +1,7 @@
 "use client";
 
-import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
+import { GoogleMap, Marker } from "@react-google-maps/api";
+import { useGoogleMapsLoader } from "@/hooks/useGoogleMapsLoader";
 
 interface MapProps {
   lat: number;
@@ -14,9 +15,7 @@ const containerStyle = {
 };
 
 export default function Map({ lat, lng, label = "Location" }: MapProps) {
-  const { isLoaded } = useJsApiLoader({
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_WEB_KEY || "",
-  });
+  const { isLoaded } = useGoogleMapsLoader();
 
   if (!isLoaded) {
     return (

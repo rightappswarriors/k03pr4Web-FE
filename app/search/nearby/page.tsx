@@ -10,7 +10,7 @@ import OutletListPanel from "@/components/OutletListPanel";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { useInfiniteOutlets } from "@/hooks/useInfiniteOutlets";
 import type { SearchSuggestion } from "@/hooks/useSearch";
-import { ChevronUp } from "lucide-react";
+import { ChevronUp, Search } from "lucide-react";
 import type { MapOutlet } from "@/components/MapView";
 
 const MapView = dynamic(() => import("@/components/MapView"), {
@@ -127,6 +127,15 @@ export default function SearchNearbyPage() {
         distance: o.distance,
     }));
 
+    // Shown in the list panel's spot before any item has been searched/selected.
+    const emptyPrompt = (
+        <div className="flex flex-col items-center justify-center h-full py-10 text-center text-slate-400">
+            <Search className="h-8 w-8 mb-3" />
+            <p className="text-sm font-medium">Search for an item above</p>
+            <p className="text-xs mt-1">Nearby outlets will show up here once you pick an item.</p>
+        </div>
+    );
+
     return (
         <main className="min-h-screen flex flex-col bg-[#f7f7f5]">
             <Header />
@@ -179,20 +188,24 @@ export default function SearchNearbyPage() {
                     )}
                 </div>
 
-                {selectedItem && (
-                    <>
-                        {/* Desktop split view: 60% map / 40% list, side by side. */}
-                        <div className="mt-6 hidden lg:grid gap-6 lg:grid-cols-[3fr_2fr]">
-                            <div className="h-[600px] rounded-3xl overflow-hidden shadow-sm">
-                                <MapView
-                                    outlets={mapOutlets}
-                                    activeOutletId={activeOutletId}
-                                    onPinClick={handlePinClick}
-                                    onPinHover={setHoveredOutletId}
-                                />
-                            </div>
+                {/* Map + list now always render, per PM feedback — map should
+                    stay visible by default for UI consistency, even before
+                    a search or when results are empty, rather than being
+                    hidden entirely until an item is selected. */}
+                <>
+                    {/* Desktop split view: 60% map / 40% list, side by side. */}
+                    <div className="mt-6 hidden lg:grid gap-6 lg:grid-cols-[3fr_2fr]">
+                        <div className="h-[600px] rounded-3xl overflow-hidden shadow-sm">
+                            <MapView
+                                outlets={mapOutlets}
+                                activeOutletId={activeOutletId}
+                                onPinClick={handlePinClick}
+                                onPinHover={setHoveredOutletId}
+                            />
+                        </div>
 
-                            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm max-h-[600px] overflow-y-auto">
+                        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm max-h-[600px] overflow-y-auto">
+                            {selectedItem ? (
                                 <OutletListPanel
                                     outlets={outlets}
                                     loading={loading}
@@ -206,50 +219,56 @@ export default function SearchNearbyPage() {
                                     onCardHover={setHoveredOutletId}
                                     cardRefs={cardRefs}
                                 />
-                            </div>
+                            ) : (
+                                emptyPrompt
+                            )}
                         </div>
+                    </div>
 
-                        {/* Mobile: full-screen map with a draggable bottom sheet
-                            over it. Fixed positioning takes it out of normal
-                            page flow so it behaves like a true overlay sheet. */}
-                        <div className="lg:hidden mt-6 relative h-[calc(100vh-220px)] rounded-3xl overflow-hidden shadow-sm">
-                            <MapView
-                                outlets={mapOutlets}
-                                activeOutletId={activeOutletId}
-                                onPinClick={handlePinClick}
-                                onPinHover={setHoveredOutletId}
-                            />
+                    {/* Mobile: full-screen map with a draggable bottom sheet
+                        over it. Fixed positioning takes it out of normal
+                        page flow so it behaves like a true overlay sheet. */}
+                    <div className="lg:hidden mt-6 relative h-[calc(100vh-220px)] rounded-3xl overflow-hidden shadow-sm">
+                        <MapView
+                            outlets={mapOutlets}
+                            activeOutletId={activeOutletId}
+                            onPinClick={handlePinClick}
+                            onPinHover={setHoveredOutletId}
+                        />
 
+                        <div
+                            className="absolute left-0 right-0 bottom-0 z-20 rounded-t-3xl border border-slate-200 bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.1)] transition-[height] duration-300 ease-out overflow-hidden"
+                            style={{
+                                height: sheetExpanded
+                                    ? `${SHEET_EXPANDED_RATIO * 100}%`
+                                    : `${SHEET_PEEK_HEIGHT}px`,
+                            }}
+                        >
                             <div
-                                className="absolute left-0 right-0 bottom-0 z-20 rounded-t-3xl border border-slate-200 bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.1)] transition-[height] duration-300 ease-out overflow-hidden"
-                                style={{
-                                    height: sheetExpanded
-                                        ? `${SHEET_EXPANDED_RATIO * 100}%`
-                                        : `${SHEET_PEEK_HEIGHT}px`,
-                                }}
+                                className="flex flex-col items-center py-3 cursor-grab active:cursor-grabbing touch-none"
+                                onPointerDown={(e) => handleDragStart(e.clientY)}
+                                onPointerUp={(e) => handleDragEnd(e.clientY)}
                             >
-                                <div
-                                    className="flex flex-col items-center py-3 cursor-grab active:cursor-grabbing touch-none"
-                                    onPointerDown={(e) => handleDragStart(e.clientY)}
-                                    onPointerUp={(e) => handleDragEnd(e.clientY)}
+                                <div className="h-1 w-10 rounded-full bg-slate-300" />
+                                <button
+                                    type="button"
+                                    onClick={() => setSheetExpanded((prev) => !prev)}
+                                    className="mt-2 flex items-center gap-1 text-xs font-medium text-slate-500"
                                 >
-                                    <div className="h-1 w-10 rounded-full bg-slate-300" />
-                                    <button
-                                        type="button"
-                                        onClick={() => setSheetExpanded((prev) => !prev)}
-                                        className="mt-2 flex items-center gap-1 text-xs font-medium text-slate-500"
-                                    >
-                                        {loading
+                                    {!selectedItem
+                                        ? "Search for an item"
+                                        : loading
                                             ? "Searching..."
                                             : `${outlets.length} outlet${outlets.length === 1 ? "" : "s"} found`}
-                                        <ChevronUp
-                                            size={14}
-                                            className={`transition-transform ${sheetExpanded ? "rotate-180" : ""}`}
-                                        />
-                                    </button>
-                                </div>
+                                    <ChevronUp
+                                        size={14}
+                                        className={`transition-transform ${sheetExpanded ? "rotate-180" : ""}`}
+                                    />
+                                </button>
+                            </div>
 
-                                <div className="px-5 pb-6 overflow-y-auto h-full">
+                            <div className="px-5 pb-6 overflow-y-auto h-full">
+                                {selectedItem ? (
                                     <OutletListPanel
                                         outlets={outlets}
                                         loading={loading}
@@ -263,11 +282,13 @@ export default function SearchNearbyPage() {
                                         onCardHover={setHoveredOutletId}
                                         cardRefs={cardRefs}
                                     />
-                                </div>
+                                ) : (
+                                    emptyPrompt
+                                )}
                             </div>
                         </div>
-                    </>
-                )}
+                    </div>
+                </>
             </section>
 
             <Footer />

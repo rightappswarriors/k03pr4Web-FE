@@ -5,6 +5,7 @@ import Link from "next/link";
 import { BadgeCheck, MapPin, Timer, ImageOff } from "lucide-react";
 import { formatProductPrice } from "@/lib/utils";
 import type { WholesaleProduct } from "@/types/wholesale";
+import { formatPrice } from "@/lib/utils";
 
 export function MOQBadge({ children }: { children: React.ReactNode }) {
   return <span className="text-xs text-slate-500">MOQ: {children}</span>;

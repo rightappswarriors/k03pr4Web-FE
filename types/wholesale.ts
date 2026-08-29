@@ -336,6 +336,8 @@ export type ConversationMessage = {
   Agent?: { fullname: string, email: string}
   createdAt: string;
   clientMessageId?: string | null;
+  // Event-card metadata is intentionally heterogeneous; individual cards narrow it by event type.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   metadata?: Record<string, any> | null;
 };
 
@@ -454,6 +456,13 @@ export type PaginatedProducts = {
   total: number;
   hasMore: boolean;
 };
+export type POStatus = "PENDING" | "ACCEPTED" | "REJECTED" | "IN_TRANSIT" | "DELIVERED" | "CANCELLED";
+export type POPaymentStatus = "PENDING" | "PREPARING" | "PARTIAL" | "PAID" | "REFUNDED";
+export type ExtraCharge = { code: string; label: string; amount: number; taxable?: boolean; description?: string };
+export type PurchaseOrderRfq = { id: string; rfqNumber: string; status: string; agentId?: string; acceptedPrice?: number | null; acceptedQuantity?: number | null; acceptedDeliveryDate?: string | null; notes?: string | null };
+export type PurchaseOrderLineItem = { id: string; supplierItemId: string; qty: number; unitPrice: number; subtotal: number; itemName: string; itemSku: string; itemDescription: string; supplierItem: { id: string; name: string; sku?: string | null; image?: string | null; unit?: string | null } };
+export type PurchaseOrderDelivery = { id?: string; scheduledDate: string; deliveredAt?: string | null; status: string; driverName?: string | null; driverContact?: string | null; recipientName?: string | null; recipientContact?: string | null; latitude?: number | null; longitude?: number | null; address?: string | null; notes?: string | null };
+export type PurchaseOrder = { id: string; poNumber: string; status: POStatus; source?: "DIRECT_ORDER" | "RFQ"; supplierConfirmation?: "REVIEW_REQUIRED" | "CONFIRMED" | "DECLINED"; supplierConfirmedAt?: string | null; supplierExpectedDeliveryAt?: string | null; supplierNote?: string | null; paymentStatus: POPaymentStatus; subtotalAmount: number; extraCharges?: ExtraCharge[] | null; extraChargesTotal: number; totalAmount: number; vatAmount: number; createdAt: string; updatedAt: string; requestedDate?: string | null; notes?: string | null; rejectionReason?: string | null; paymentMethod?: "CARD" | "CASH" | "E_WALLET" | null; paymentReference?: string | null; paymentPreparedAt?: string | null; receiptSnapshot?: Record<string, unknown> | null; paymentAttempt?: { id: string; status: string; provider: string; createdAt: string } | null; supplier: ConversationSupplier | null; rfqs: PurchaseOrderRfq[]; lineItems: PurchaseOrderLineItem[]; delivery: PurchaseOrderDelivery | null; conversation?: { id: string; messages: ConversationMessage[] } | null };
 
 
 
