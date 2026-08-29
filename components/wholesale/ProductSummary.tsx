@@ -1,4 +1,5 @@
 import { CheckCircle, Clock, Package, ShoppingCart, Table as TableIcon } from "lucide-react";
+import { formatProductPrice } from "@/lib/utils";
 import type { WholesaleProduct } from "@/types/wholesale";
 
 type ProductSummaryProps = {
@@ -7,12 +8,27 @@ type ProductSummaryProps = {
 
 export default function ProductSummary({ product }: ProductSummaryProps) {
   const hasAttributes = product.attributes && product.attributes.length > 0;
-  console.log(product.priceTiers)
+
   return (
     <div className="space-y-6">
       {/* Product Title Card */}
       <div className="rounded-xl bg-white p-6">
         <h1 className="text-2xl font-bold text-slate-900 lg:text-3xl">{product.name}</h1>
+
+        {/* Price + Unit + MOQ — surfaced here since ProductPriceTiers only
+            renders when priceTiers exist, and price shouldn't disappear
+            entirely when a product has none. */}
+        <div className="mt-3 flex flex-wrap items-baseline gap-2">
+          <span className="text-2xl font-bold text-emerald-700">
+            {formatProductPrice(product.price)}
+          </span>
+          {product.unit && (
+            <span className="text-sm text-slate-500">/ {product.unit}</span>
+          )}
+          <span className="ml-2 inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+            MOQ: {product.moq}
+          </span>
+        </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-4 text-sm">
           {/* Description - full width, own line */}
@@ -80,7 +96,7 @@ export default function ProductSummary({ product }: ProductSummaryProps) {
               <ShoppingCart className="size-5 text-slate-400" />
               <div>
                 <span className="text-sm text-slate-500">Sample price:</span>
-                <span className="ml-2 font-semibold text-slate-900">{product.samplePrice}</span>
+                <span className="ml-2 font-semibold text-slate-900">{formatProductPrice(product.samplePrice)}</span>
               </div>
             </div>
           )}

@@ -1,13 +1,13 @@
 "use client";
 
 import { Package } from "lucide-react";
+import { formatProductPrice } from "@/lib/utils";
 import type { ProductPriceTier } from "@/types/wholesale";
 
 type ProductPriceTiersProps = {
   priceTiers: ProductPriceTier[];
 };
 
-// Helper function for tier label - only last tier shows "+"
 function tierLabel(tier: { minQty: number; maxQty: number | null | undefined }) {
   return tier.maxQty == null ? `${tier.minQty}+` : `${tier.minQty}-${tier.maxQty}`;
 }
@@ -15,7 +15,6 @@ function tierLabel(tier: { minQty: number; maxQty: number | null | undefined }) 
 export default function ProductPriceTiers({ priceTiers }: ProductPriceTiersProps) {
   if (!priceTiers || priceTiers.length === 0) return null;
 
-  // Sort tiers by minQty to ensure proper display
   const sortedTiers = [...priceTiers].sort((a, b) => a.minQty - b.minQty);
 
   return (
@@ -37,9 +36,8 @@ export default function ProductPriceTiers({ priceTiers }: ProductPriceTiersProps
             </div>
             <div className="text-right">
               <span className="text-lg font-bold text-slate-900">
-                ₱{parseFloat(tier.unitPrice).toLocaleString()}
+                {formatProductPrice(tier.unitPrice)}
               </span>
-              <span className="text-xs text-slate-500">/ {tier.currency}</span>
             </div>
           </div>
         ))}

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
+import { formatProductPrice } from "@/lib/utils";
 import type { WholesaleProduct } from "@/types/wholesale";
 
 type RelatedProductsProps = {
@@ -29,7 +30,9 @@ export default function RelatedProducts({ products }: RelatedProductsProps) {
               />
             </div>
             <h3 className="mt-2 text-sm font-medium text-slate-900 line-clamp-2">{product.name}</h3>
-            <p className="mt-1 text-sm text-emerald-600 font-semibold">{product.priceTiers?.[0]?.unitPrice || product.price}</p>
+            <p className="mt-1 text-sm text-emerald-600 font-semibold">
+              {formatProductPrice(product.priceTiers?.[0]?.unitPrice || product.price)}
+            </p>
           </Link>
         ))}
       </div>

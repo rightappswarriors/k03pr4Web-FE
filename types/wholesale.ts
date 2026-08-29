@@ -451,6 +451,11 @@ export type RejectOfferDto = {
   reason?: string;
 };
 
+export type PaginatedProducts = {
+  data: WholesaleProduct[];
+  total: number;
+  hasMore: boolean;
+};
 export type POStatus = "PENDING" | "ACCEPTED" | "REJECTED" | "IN_TRANSIT" | "DELIVERED" | "CANCELLED";
 export type POPaymentStatus = "PENDING" | "PREPARING" | "PARTIAL" | "PAID" | "REFUNDED";
 export type ExtraCharge = { code: string; label: string; amount: number; taxable?: boolean; description?: string };

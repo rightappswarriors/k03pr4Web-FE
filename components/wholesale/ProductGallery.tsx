@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ChevronLeft, ChevronRight, ZoomIn } from "lucide-react";
+import { formatProductPrice } from "@/lib/utils";
 import type { ProductVariant } from "@/types/wholesale";
 
 type ProductGalleryProps = {
@@ -16,14 +17,12 @@ export default function ProductGallery({ images, productName, variants, onVarian
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Determine the active variant and its images
   const hasVariants = variants && variants.length > 0;
   const defaultVariant = hasVariants ? variants.find(v => v.isDefault) || variants[0] : null;
   const activeVariant = selectedVariantId
     ? variants?.find(v => v.id === selectedVariantId)
     : defaultVariant;
 
-  // Use variant images if available and a variant is selected, otherwise use main images
   const displayImages = activeVariant?.images && activeVariant.images.length > 0
     ? activeVariant.images
     : images;
@@ -41,16 +40,15 @@ export default function ProductGallery({ images, productName, variants, onVarian
 
   const handleVariantSelect = (variant: ProductVariant) => {
     setSelectedVariantId(variant.id);
-    setSelectedImage(0); // Reset to first image when switching variants
+    setSelectedImage(0);
     onVariantChange?.(variant);
   };
 
   return (
     <>
       <div className="space-y-4">
-        {/* Gallery: image on top / thumbs below on mobile, thumbs left / image right on desktop */}
         <div className="flex flex-col-reverse gap-4 lg:flex-row lg:items-start">
-          {/* Thumbnails */}
+          {/* Thumbnails — object-cover kept as-is, fine for uniformity */}
           {displayImages.length > 1 && (
             <div className="flex gap-2 overflow-x-auto lg:w-20 lg:flex-shrink-0 lg:flex-col lg:overflow-x-visible lg:overflow-y-auto lg:max-h-[500px]">
               {displayImages.map((img, index) => (
@@ -70,12 +68,12 @@ export default function ProductGallery({ images, productName, variants, onVarian
             </div>
           )}
 
-          {/* Main Image */}
+          {/* Main Image — object-contain + backdrop so full product isn't cropped/zoomed */}
           <div className="relative aspect-square flex-1 overflow-hidden rounded-xl bg-white">
             <img
               src={displayImages[selectedImage]}
               alt={productName}
-              className="h-full w-full cursor-zoom-in object-cover"
+              className="h-full w-full cursor-zoom-in bg-slate-50 object-contain"
               onClick={() => setIsModalOpen(true)}
             />
             <button
@@ -106,13 +104,11 @@ export default function ProductGallery({ images, productName, variants, onVarian
             )}
           </div>
         </div>
-        {/* ^ closes the flex row div */}
 
         {/* Variant Selector - if variants exist */}
         {hasVariants && (
           <div className="mt-4 border-t border-slate-200 pt-4">
             {variants.some(v => v.options.some(o => o.colorHex)) ? (
-              // Color palette style selector
               <div className="space-y-3">
                 <p className="text-sm font-medium text-slate-700">Select Color:</p>
                 <div className="flex flex-wrap gap-2">
@@ -145,7 +141,6 @@ export default function ProductGallery({ images, productName, variants, onVarian
                 </div>
               </div>
             ) : (
-              // Dropdown style selector for non-color variants
               <div className="space-y-3">
                 <p className="text-sm font-medium text-slate-700">Select Variant:</p>
                 <select
@@ -158,7 +153,7 @@ export default function ProductGallery({ images, productName, variants, onVarian
                 >
                   {variants.map((variant) => (
                     <option key={variant.id} value={variant.id}>
-                      {variant.name} - ₱{variant.price}
+                      {variant.name} - {formatProductPrice(variant.price)}
                     </option>
                   ))}
                 </select>
@@ -167,9 +162,8 @@ export default function ProductGallery({ images, productName, variants, onVarian
           </div>
         )}
       </div>
-      {/* ^ closes the outer space-y-4 div */}
 
-      {/* Modal for zoomed view */}
+      {/* Modal for zoomed view — already correct, unchanged */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setIsModalOpen(false)}>
           <div className="relative max-w-4xl max-h-[90vh]">
