@@ -338,23 +338,32 @@ export default function AddToCartModal({
     // Clamp and fetch fresh quote
     newQty = Math.max(moq, Math.min(availableQty, newQty || moq));
 
-    // Draft is no longer needed once committed — clear it so the field
-    // falls back to displaying the real `quantity` on the next render.
+    // Optimistically commit the new quantity right away (best-effort local
+    // price estimate for base items, last-known price for variants) so the
+    // field reflects what was typed immediately — never a flash back to the
+    // old value while we wait on the network. The real price is refined
+    // below once the server responds.
+    const optimisticPrice = line.variantId === null
+      ? (computeBracketPrice(newQty, pricing.priceTiers) ?? line.unitPrice)
+      : line.unitPrice;
+    updateLineQuantity(key, newQty, optimisticPrice);
+
+    // Draft is no longer needed — the line itself now shows newQty, so
+    // clearing this is safe and won't cause a visible fallback flash.
     setQtyDrafts(prev => {
       const next = { ...prev };
       delete next[key];
       return next;
     });
 
-    if (line.variantId === null) {
-      try {
-        const quote = await wholesaleApi.priceQuote(pricing.supplierItem.id, { quantity: newQty });
-        updateLineQuantity(key, newQty, quote.unitPrice);
-      } catch {
-        updateLineQuantity(key, newQty, line.unitPrice);
-      }
-    } else {
-      updateLineQuantity(key, newQty, line.unitPrice);
+    try {
+      const quote = await wholesaleApi.priceQuote(pricing.supplierItem.id, {
+        quantity: newQty,
+        variantId: line.variantId ?? undefined,
+      });
+      updateLineQuantity(key, newQty, quote.unitPrice);
+    } catch {
+      // Keep the optimistic price — server couldn't be reached / rejected it
     }
   };
 
@@ -596,7 +605,7 @@ export default function AddToCartModal({
                           }}
                           min={moq}
                           max={availableQty}
-                          className="w-16 rounded-lg border border-slate-300 px-2 py-1 text-center"
+                          className="w-16 rounded-lg border border-slate-300 px-2 py-1 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         />
                         <button
                           onClick={() => handleQuantityChange(line.key, 1)}
