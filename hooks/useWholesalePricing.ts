@@ -35,7 +35,6 @@ export function computeBracketPrice(
 ): PriceTier | null {
   if (priceTiers.length === 0) return null;
 
-  // Sort by minQty ascending
   const sorted = [...priceTiers].sort((a, b) => a.minQty - b.minQty);
 
   for (const tier of sorted) {
@@ -46,7 +45,6 @@ export function computeBracketPrice(
     }
   }
 
-  // If quantity is above the last tier's maxQty and that tier has no maxQty, use it
   const highestTier = sorted[sorted.length - 1];
   if (highestTier.maxQty === undefined || highestTier.maxQty === null) {
     if (quantity >= highestTier.minQty) {
@@ -64,25 +62,30 @@ export function useWholesalePricing() {
     moq: number,
     availableQty: number,
     hasVariants: boolean,
-    variantPrice?: number
+    variantPrice?: number,
+    variantPriceTiers: PriceTier[] = []
   ): PriceQuote => {
-    // MOQ always applies — item-level MOQ, whether or not a variant is selected
+    // MOQ and inventory always apply, whether or not a variant is selected —
+    // caller passes the right availableQty (variant's vs base item's).
     if (quantity < moq) {
       throw new Error(`Minimum order quantity is ${moq}`);
     }
-
-    // Inventory check — variant's availableQty when a variant is selected,
-    // otherwise the base item's availableQty (caller passes the right one in)
     if (quantity > availableQty) {
       throw new Error(`Only ${availableQty} units available in stock`);
     }
 
-    // Tier resolves the same way whether or not a variant is selected;
-    // variantPrice is only a fallback when no tier matches.
-    const tierApplied = computeBracketPrice(quantity, priceTiers);
-
     if (hasVariants && variantPrice !== undefined) {
-      const unitPrice = tierApplied?.price ?? variantPrice;
+      // Priority: variant's own tier → variant's own price → parent tier → parent base price
+      const variantTierApplied = computeBracketPrice(quantity, variantPriceTiers);
+      const parentTierApplied = computeBracketPrice(quantity, priceTiers);
+
+      const tierApplied = variantTierApplied ?? parentTierApplied;
+      const unitPrice =
+        variantTierApplied?.price ??
+        (variantPrice > 0 ? variantPrice : undefined) ??
+        parentTierApplied?.price ??
+        0; // caller should always have a base unitPrice fallback upstream
+
       return {
         unitPrice,
         subtotal: unitPrice * quantity,
@@ -90,8 +93,10 @@ export function useWholesalePricing() {
       };
     }
 
+    // No variant selected — base item pricing
+    const tierApplied = computeBracketPrice(quantity, priceTiers);
+
     if (!tierApplied && priceTiers.length === 0) {
-      // No tiers defined, caller should use unitPrice from product
       throw new Error("No pricing tiers available");
     }
 
