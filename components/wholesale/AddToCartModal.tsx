@@ -6,44 +6,8 @@ import { useRouter } from "next/navigation";
 import { wholesaleApi } from "@/services/wholesale.service";
 import { useDialogBehavior } from "@/hooks/useDialogBehavior";
 import { formatPrice } from "@/lib/utils";
-import type { WholesaleProduct } from "@/types/wholesale";
+import type { WholesaleProduct, PricingData } from "@/types/wholesale";
 
-type PricingData = {
-  supplierItem: {
-    id: string;
-    name: string;
-    unitPrice: number;
-    moq: number;
-    availableQty: number;
-    image?: string;
-  };
-  priceTiers: Array<{
-    id: string;
-    minQty: number;
-    maxQty?: number | null;
-    price: number;
-    currency: string;
-  }>;
-  variantGroups: Array<{
-    id: string;
-    name: string;
-    options: Array<{
-      id: string;
-      value: string;
-      colorHex?: string;
-      image?: string;
-    }>;
-  }>;
-  variants: Array<{
-    id: string;
-    name: string;
-    price: number;
-    availableQty: number;
-    image?: string;
-    isActive: boolean;
-    optionIds: string[];
-  }>;
-};
 
 type CartLine = {
   key: string;
@@ -63,6 +27,7 @@ function tierLabel(tier: { minQty: number; maxQty?: number | null | undefined })
 type AddToCartModalProps = {
   productId: string;
   product: WholesaleProduct;
+  initialVariantId?: string;
   isOpen: boolean;
   onClose: () => void;
   onOpenProtection: () => void;
@@ -72,6 +37,7 @@ type AddToCartModalProps = {
 export default function AddToCartModal({
   productId,
   product,
+  initialVariantId,
   isOpen,
   onClose,
   onOpenProtection,
@@ -123,10 +89,10 @@ export default function AddToCartModal({
       .getPricing(productId)
       .then((data) => {
         setPricing(data);
-        // Products without variants have no dropdown to trigger handleAddLine,
-        // so auto-add the base tiered-pricing line once pricing is known.
+        const moq = data.supplierItem.moq;
+
         if (data.variants.length === 0) {
-          const moq = data.supplierItem.moq;
+          // No variants at all — auto-add the base tiered-pricing line.
           wholesaleApi
             .priceQuote(data.supplierItem.id, { quantity: moq })
             .then((quote) => {
@@ -152,6 +118,37 @@ export default function AddToCartModal({
                 subtotal: unitPrice * moq,
               }]);
             });
+            } else if (initialVariantId) {
+          // Product has variants and one was already selected on the
+          // product detail page — carry that exact selection in, rather
+          // than opening with an empty dropdown the buyer has to re-choose.
+          const variant = data.variants.find((v) => v.id === initialVariantId);
+          if (variant) {
+            wholesaleApi
+              .priceQuote(data.supplierItem.id, { quantity: 1, variantId: variant.id })
+              .then((quote) => {
+                setLines([{
+                  key: variant.id,
+                  variantId: variant.id,
+                  label: variant.name || variant.optionIds.join(" / "),
+                  thumbnail: variant.image,
+                  quantity: 1,
+                  unitPrice: quote.unitPrice,
+                  subtotal: quote.subtotal,
+                }]);
+              })
+              .catch(() => {
+                setLines([{
+                  key: variant.id,
+                  variantId: variant.id,
+                  label: variant.name || variant.optionIds.join(" / "),
+                  thumbnail: variant.image,
+                  quantity: 1,
+                  unitPrice: variant.price,
+                  subtotal: variant.price,
+                }]);
+              });
+          }
         }
       })
       .catch(() => {
@@ -170,7 +167,7 @@ export default function AddToCartModal({
         });
       })
       .finally(() => setLoading(false));
-  }, [isOpen, productId, product]);
+  }, [isOpen, productId, product, initialVariantId]);
 
   // Compute bracket price for given quantity - client-side mirror
   const computeBracketPrice = useCallback((

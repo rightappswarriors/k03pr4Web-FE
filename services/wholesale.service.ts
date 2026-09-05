@@ -9,7 +9,9 @@ import type {
   RFQFormData,
   PricingQuote,
   PaginatedProducts,
+  PricingData,
 } from "@/types/wholesale";
+
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
@@ -111,7 +113,7 @@ export const wholesaleApi = {
   getQuote: (id: string): Promise<WholesaleQuote | null> =>
     publicFetch<WholesaleQuote[]>(`/quotes`).then((quotes) => quotes.find((q) => q.id === id) ?? null),
 
-  getPricing: (id: string): Promise<any> =>
+  getPricing: (id: string): Promise<PricingData> =>
     publicFetch(`/supplier-items/${id}/pricing`),
 
   priceQuote: (id: string, body: { quantity: number; variantId?: string }) =>
