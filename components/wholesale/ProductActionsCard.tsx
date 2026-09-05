@@ -6,68 +6,79 @@ import SupplierChat from "./SupplierChat";
 import AddToCartModal from "./AddToCartModal";
 import OrderProtectionModal from "./OrderProtectionModal";
 import RequestQuotationDrawer from "./RequestQuotationDrawer";
-import type { WholesaleProduct } from "@/types/wholesale";
+import type { WholesaleProduct, ProductVariant } from "@/types/wholesale";
 
 type ProductActionsCardProps = {
   product: WholesaleProduct;
+  selectedVariant?: ProductVariant | null;
+  hasVariants?: boolean;
 };
 
-export default function ProductActionsCard({ product }: ProductActionsCardProps) {
-  const [showChat, setShowChat] = useState(false);
-  const [showAddToCart, setShowAddToCart] = useState(false);
-  const [showProtection, setShowProtection] = useState(false);
-  const [showRfqDrawer, setShowRfqDrawer] = useState(false);
+type ActiveModal = "chat" | "cart" | "protection" | "rfq" | null;
+
+export default function ProductActionsCard({ product, selectedVariant, hasVariants }: ProductActionsCardProps) {
+  const [activeModal, setActiveModal] = useState<ActiveModal>(null);
+  const closeModal = () => setActiveModal(null);
+  // Buyer must have an actual selection before ordering when the product
+  // has variants and none is auto-selected via isDefault — prevents
+  // accidentally ordering the base SKU or the wrong variant.
+  const requiresSelection = Boolean(hasVariants) && !selectedVariant;
 
   const handleStartOrder = () => {
-    // For now, open the AddToCartModal in "buy now" mode
-    // This would typically open a streamlined checkout flow
-    setShowAddToCart(true);
+    if (requiresSelection) return;
+    setActiveModal("cart");
+  };
+  const handleAddToCart = () => {
+    if (requiresSelection) return;
+    setActiveModal("cart");
   };
 
   return (
     <>
       <div className="rounded-xl bg-white p-6">
         <h2 className="mb-4 text-lg font-semibold text-slate-900">Quick Actions</h2>
+        {requiresSelection && (
+          <p className="mb-3 text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+            Please select an option above before ordering.
+          </p>
+        )}
 
-        {/* Start Order - Primary action */}
         <button
           onClick={handleStartOrder}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-3 font-medium text-white hover:bg-emerald-700 mb-3"
+          disabled={requiresSelection}
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-3 font-medium text-white hover:bg-emerald-700 mb-3 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <ShoppingCart className="size-5" />
           Start Order
         </button>
 
-        {/* Request Quotation - Secondary action */}
         <button
-          onClick={() => setShowRfqDrawer(true)}
+          onClick={() => setActiveModal("rfq")}
           className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-3 font-medium text-slate-700 hover:bg-slate-50 mb-3"
         >
           <FileText className="size-5" />
           Request Quotation
         </button>
 
-        {/* Chat Now - Secondary action */}
         <button
-          onClick={() => setShowChat(true)}
+          onClick={() => setActiveModal("chat")}
           className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-3 font-medium text-slate-700 hover:bg-slate-50 mb-3"
         >
           <MessageCircle className="size-5" />
           Chat Now
         </button>
 
-        {/* Add to Cart - Secondary action */}
         <button
-          onClick={() => setShowAddToCart(true)}
-          className="flex w-full items-center justify-center gap-2 rounded-lg border border-emerald-600 bg-emerald-50 px-4 py-3 font-medium text-emerald-700 hover:bg-emerald-100"
+          onClick={handleAddToCart}
+          disabled={requiresSelection}
+          className="flex w-full items-center justify-center gap-2 rounded-lg border border-emerald-600 bg-emerald-50 px-4 py-3 font-medium text-emerald-700 hover:bg-emerald-100 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <ShoppingCart className="size-5" />
           Add to Cart
         </button>
 
-        {/* Order Protection Link */}
         <button
-          onClick={() => setShowProtection(true)}
+          onClick={() => setActiveModal("protection")}
           className="mt-3 w-full text-center text-xs text-slate-500 hover:text-slate-700 underline"
         >
           Order Protection
@@ -76,26 +87,28 @@ export default function ProductActionsCard({ product }: ProductActionsCardProps)
 
       <SupplierChat
         product={product}
-        isOpen={showChat}
-        onClose={() => setShowChat(false)}
+        isOpen={activeModal === "chat"}
+        onClose={closeModal}
       />
       <AddToCartModal
         productId={product.id}
         product={product}
-        isOpen={showAddToCart}
-        onClose={() => setShowAddToCart(false)}
+        initialVariantId={selectedVariant?.id}
+        isOpen={activeModal === "cart"}
+        onClose={closeModal}
+        onOpenProtection={() => setActiveModal("protection")}
         onSuccess={() => {
           // Could trigger cart count update in header
         }}
       />
       <OrderProtectionModal
-        isOpen={showProtection}
-        onClose={() => setShowProtection(false)}
+        isOpen={activeModal === "protection"}
+        onClose={closeModal}
       />
       <RequestQuotationDrawer
         product={product}
-        isOpen={showRfqDrawer}
-        onClose={() => setShowRfqDrawer(false)}
+        isOpen={activeModal === "rfq"}
+        onClose={closeModal}
       />
     </>
   );
