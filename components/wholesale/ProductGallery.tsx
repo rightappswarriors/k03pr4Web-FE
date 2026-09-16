@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, ZoomIn } from "lucide-react";
 import { formatProductPrice } from "@/lib/utils";
 import type { ProductVariant } from "@/types/wholesale";
@@ -9,12 +9,12 @@ type ProductGalleryProps = {
   images: string[];
   productName: string;
   variants?: ProductVariant[];
+  selectedVariantId?: string;
   onVariantChange?: (variant: ProductVariant) => void;
 };
 
-export default function ProductGallery({ images, productName, variants, onVariantChange }: ProductGalleryProps) {
+export default function ProductGallery({ images, productName, variants, selectedVariantId, onVariantChange }: ProductGalleryProps) {
   const [selectedImage, setSelectedImage] = useState(0);
-  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const hasVariants = variants && variants.length > 0;
@@ -23,26 +23,83 @@ export default function ProductGallery({ images, productName, variants, onVarian
     ? variants?.find(v => v.id === selectedVariantId)
     : defaultVariant;
 
-  const displayImages = activeVariant?.images && activeVariant.images.length > 0
-    ? activeVariant.images
-    : images;
+  // Derive attribute groups (e.g. "Color", "Size") and their available
+  // option values from the variants themselves — no separate API call
+  // needed, since each variant already carries its own {group, value} pairs.
+  const attributeGroups = useMemo(() => {
+    if (!hasVariants) return [];
+    const groupMap = new Map<string, { value: string; colorHex?: string }[]>();
+    for (const variant of variants) {
+      for (const opt of variant.options) {
+        const existing = groupMap.get(opt.group) ?? [];
+        if (!existing.some(o => o.value === opt.value)) {
+          existing.push({ value: opt.value, colorHex: opt.colorHex });
+        }
+        groupMap.set(opt.group, existing);
+      }
+    }
+    return Array.from(groupMap.entries()).map(([group, options]) => ({ group, options }));
+  }, [hasVariants, variants]);
 
-  if (!displayImages || displayImages.length === 0) {
-    return (
-      <div className="aspect-square w-full rounded-xl bg-slate-100 flex items-center justify-center">
-        <span className="text-slate-400">No image available</span>
-      </div>
+  // One selected value per attribute group — e.g. { Color: "Red", Size: "Large" }
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
+
+  // Seed selections from the currently active variant whenever it changes
+  // (covers both the initial default-variant load and external changes to
+  // selectedVariantId from the parent page).
+  useEffect(() => {
+    if (!activeVariant) return;
+    const next: Record<string, string> = {};
+    for (const opt of activeVariant.options) {
+      next[opt.group] = opt.value;
+    }
+    setSelectedOptions(next);
+  }, [activeVariant?.id]);
+
+  // Resolve which single variant matches the current combination of
+  // selected options across every group, if any.
+  const resolveVariantFromOptions = (options: Record<string, string>) => {
+    if (!hasVariants) return undefined;
+    return variants.find(v =>
+      attributeGroups.every(g => {
+        const selected = options[g.group];
+        if (!selected) return false;
+        return v.options.some(o => o.group === g.group && o.value === selected);
+      })
     );
-  }
+  };
+
+  const handleAttributeSelect = (group: string, value: string) => {
+    const nextOptions = { ...selectedOptions, [group]: value };
+    setSelectedOptions(nextOptions);
+    const resolved = resolveVariantFromOptions(nextOptions);
+    if (resolved) {
+      setSelectedImage(0);
+      onVariantChange?.(resolved);
+    }
+    // If no variant matches this combination (e.g. "Blue + XL" doesn't
+    // exist), we intentionally don't call onVariantChange — the parent's
+    // selectedVariant stays whatever it was, and ProductActionsCard's
+    // "please select an option" gating will not fire since a variant WAS
+    // previously selected; consider surfacing a "combination unavailable"
+    // message here if that's confusing in practice.
+  };
+
+  // Image fallback chain per Task C requirement 5: variant.image first
+  // (single hero shot), then the variant's full image gallery, then the
+  // base product images.
+  const FALLBACK_IMAGE = "https://placehold.co/600x600?text=No+Image";
+
+  const displayImages = activeVariant?.image
+    ? [activeVariant.image, ...(activeVariant.images?.filter(img => img !== activeVariant.image) ?? [])]
+    : activeVariant?.images && activeVariant.images.length > 0
+      ? activeVariant.images
+      : images && images.length > 0
+        ? images
+        : [FALLBACK_IMAGE];
 
   const nextImage = () => setSelectedImage((prev) => (prev + 1) % displayImages.length);
   const prevImage = () => setSelectedImage((prev) => (prev - 1 + displayImages.length) % displayImages.length);
-
-  const handleVariantSelect = (variant: ProductVariant) => {
-    setSelectedVariantId(variant.id);
-    setSelectedImage(0);
-    onVariantChange?.(variant);
-  };
 
   return (
     <>
@@ -70,12 +127,18 @@ export default function ProductGallery({ images, productName, variants, onVarian
 
           {/* Main Image — object-contain + backdrop so full product isn't cropped/zoomed */}
           <div className="relative aspect-square flex-1 overflow-hidden rounded-xl bg-white">
-            <img
-              src={displayImages[selectedImage]}
-              alt={productName}
-              className="h-full w-full cursor-zoom-in bg-slate-50 object-contain"
-              onClick={() => setIsModalOpen(true)}
-            />
+            {displayImages[selectedImage] === FALLBACK_IMAGE ? (
+              <div className="flex h-full w-full items-center justify-center bg-slate-100">
+                <span className="text-slate-400">No image available</span>
+              </div>
+            ) : (
+              <img
+                src={displayImages[selectedImage]}
+                alt={productName}
+                className="h-full w-full cursor-zoom-in bg-slate-50 object-contain"
+                onClick={() => setIsModalOpen(true)}
+              />
+            )}
             <button
               onClick={() => setIsModalOpen(true)}
               className="absolute right-3 top-3 rounded-full bg-white/80 p-2 hover:bg-white"
@@ -107,58 +170,54 @@ export default function ProductGallery({ images, productName, variants, onVarian
 
         {/* Variant Selector - if variants exist */}
         {hasVariants && (
-          <div className="mt-4 border-t border-slate-200 pt-4">
-            {variants.some(v => v.options.some(o => o.colorHex)) ? (
-              <div className="space-y-3">
-                <p className="text-sm font-medium text-slate-700">Select Color:</p>
-                <div className="flex flex-wrap gap-2">
-                  {variants.map((variant) => {
-                    const colorOption = variant.options.find(o => o.colorHex);
-                    const isSelected = selectedVariantId === variant.id || (!selectedVariantId && variant.isDefault);
-                    return (
-                      <button
-                        key={variant.id}
-                        onClick={() => handleVariantSelect(variant)}
-                        className={`relative w-10 h-10 rounded-full border-2 transition-all ${isSelected ? "border-emerald-600 scale-110" : "border-slate-300 hover:scale-105"
-                          }`}
-                        title={variant.name}
+          <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+            <div className="space-y-4">
+              {attributeGroups.map(({ group, options }) => {
+                const isColorGroup = options.some(o => o.colorHex);
+                return (
+                  <div key={group} className="space-y-2">
+                    <p className="text-sm font-semibold text-slate-900">
+                      {group}
+                      {selectedOptions[group] && (
+                        <span className="ml-1 font-normal text-slate-500">— {selectedOptions[group]}</span>
+                      )}
+                    </p>
+                    {isColorGroup ? (
+                      <div className="flex flex-wrap gap-2">
+                        {options.map((opt) => {
+                          const isSelected = selectedOptions[group] === opt.value;
+                          return (
+                            <button
+                              key={opt.value}
+                              onClick={() => handleAttributeSelect(group, opt.value)}
+                              className={`relative w-7 h-7 rounded-full border-2 transition-all ${isSelected ? "border-emerald-600 scale-110" : "border-slate-300 hover:scale-105"
+                                }`}
+                              title={opt.value}
+                            >
+                              <div
+                                className="w-full h-full rounded-full"
+                                style={{ backgroundColor: opt.colorHex }}
+                              />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <select
+                        value={selectedOptions[group] ?? ""}
+                        onChange={(e) => handleAttributeSelect(group, e.target.value)}
+                        className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm font-medium text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                       >
-                        {colorOption?.colorHex ? (
-                          <div
-                            className="w-full h-full rounded-full"
-                            style={{ backgroundColor: colorOption.colorHex }}
-                          />
-                        ) : (
-                          <img
-                            src={variant.image || displayImages[0]}
-                            alt={variant.name}
-                            className="w-full h-full rounded-full object-cover"
-                          />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <p className="text-sm font-medium text-slate-700">Select Variant:</p>
-                <select
-                  value={selectedVariantId || defaultVariant?.id || ""}
-                  onChange={(e) => {
-                    const v = variants.find(v => v.id === e.target.value);
-                    if (v) handleVariantSelect(v);
-                  }}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                >
-                  {variants.map((variant) => (
-                    <option key={variant.id} value={variant.id}>
-                      {variant.name} - {formatProductPrice(variant.price)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+                        <option value="" disabled>Choose {group.toLowerCase()}...</option>
+                        {options.map((opt) => (
+                          <option key={opt.value} value={opt.value}>{opt.value}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>

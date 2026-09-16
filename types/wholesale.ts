@@ -1,5 +1,42 @@
 export type WholesaleCategory = { id: string; name: string; icon: string };
 
+export type PricingData = {
+  supplierItem: {
+    id: string;
+    name: string;
+    unitPrice: number;
+    moq: number;
+    availableQty: number;
+    image?: string;
+  };
+  priceTiers: Array<{
+    id: string;
+    minQty: number;
+    maxQty?: number | null;
+    price: number;
+    currency: string;
+  }>;
+  variantGroups: Array<{
+    id: string;
+    name: string;
+    options: Array<{
+      id: string;
+      value: string;
+      colorHex?: string;
+      image?: string;
+    }>;
+  }>;
+  variants: Array<{
+    id: string;
+    name: string;
+    price: number;
+    availableQty: number;
+    image?: string;
+    isActive: boolean;
+    optionIds: string[];
+  }>;
+};
+
 export type ProductPriceTier = {
   minQty: number;
   maxQty?: number;
