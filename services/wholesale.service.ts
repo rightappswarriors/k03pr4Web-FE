@@ -18,8 +18,14 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
  * Does NOT include auth headers or refresh logic — these endpoints
  * are accessible by guests and retail users.
  */
-async function publicFetch<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_BASE}/wholesale${path}`);
+async function publicFetch<T>(path: string, options?: RequestInit): Promise<T> {
+  const res = await fetch(`${API_BASE}/wholesale${path}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options?.headers,
+    },
+  });
   if (!res.ok) throw new Error(`Wholesale API error: ${res.status} ${path}`);
   return res.json() as T;
 }
@@ -109,7 +115,10 @@ export const wholesaleApi = {
     publicFetch(`/supplier-items/${id}/pricing`),
 
   priceQuote: (id: string, body: { quantity: number; variantId?: string }) =>
-    publicFetch<PricingQuote>(`/supplier-items/${id}/price-quote`),
+    publicFetch<PricingQuote>(`/supplier-items/${id}/price-quote`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
 
   // ─── Agent-protected endpoints (use agentFetch with auto-refresh) ─────────
   submitRFQForm: (data: RFQFormData & { productId: string }): Promise<{ success: boolean; quoteId: string }> =>
