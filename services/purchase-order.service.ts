@@ -8,6 +8,8 @@ export type PaymentAttemptResult = {
   provider: string;
   amount: number;
   checkoutUrl?: string;
+  checkoutReusable?: boolean;
+  checkoutExpiresAt?: string | null;
   active?: boolean;
   confirmed?: boolean;
   canRetry?: boolean;
@@ -20,6 +22,8 @@ export const purchaseOrderApi = {
   get: (id: string): Promise<PurchaseOrder> => agentFetch(`/agent/pos/${id}`),
   accept: (id: string): Promise<PurchaseOrder> => agentFetch(`/agent/pos/${id}/accept`, { method: "POST" }),
   reject: (id: string, reason: string): Promise<PurchaseOrder> => agentFetch(`/agent/pos/${id}/reject`, { method: "POST", body: JSON.stringify({ reason }) }),
+  confirmReceipt: (id: string): Promise<PurchaseOrder> => agentFetch(`/agent/pos/${id}/confirm-receipt`, { method: "POST" }),
+  acceptSupplierDeliveryDate: (id: string): Promise<PurchaseOrder> => agentFetch(`/agent/pos/${id}/delivery-date/accept`, { method: "POST" }),
   preparePayment: (id: string, paymentMethod: "CARD" | "CASH" | "E_WALLET", delivery: { scheduledDate: string; address: string; latitude?: number | null; longitude?: number | null; notes?: string; recipientName?: string; recipientContact?: string }, paymentReference?: string): Promise<PurchaseOrder> => agentFetch(`/agent/pos/${id}/payment-preparation`, { method: "POST", body: JSON.stringify({ paymentMethod, paymentReference, delivery }) }),
   beginPayment: (id: string): Promise<PaymentAttemptResult> => agentFetch(`/agent/pos/${id}/payments`, { method: "POST" }),
   reconcilePayment: (transactionId: string): Promise<PaymentAttemptResult> => agentFetch(`/agent/payments/${transactionId}/reconcile`, { method: "POST" }),
