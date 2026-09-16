@@ -11,6 +11,7 @@ import type {
   PaginatedProducts,
   PricingData,
 } from "@/types/wholesale";
+import type { WholesaleCart, WholesaleCartValidation } from "@/types/wholesale";
 
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
@@ -131,6 +132,23 @@ export const wholesaleApi = {
       method: "POST",
       body: JSON.stringify(body),
     }),
+
+  getCart: (): Promise<WholesaleCart> =>
+    agentFetch<WholesaleCart>(`/wholesale/cart`),
+
+  updateCartLine: (lineId: string, quantity: number) =>
+    agentFetch<WholesaleCart>(`/wholesale/cart/lines/${lineId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ quantity }),
+    }),
+
+  removeCartLine: (lineId: string) =>
+    agentFetch<WholesaleCart>(`/wholesale/cart/lines/${lineId}`, {
+      method: "DELETE",
+    }),
+
+  validateCart: (): Promise<WholesaleCartValidation> =>
+    agentFetch<WholesaleCartValidation>(`/wholesale/cart/validate`),
 
   startOrder: (body: { supplierItemId: string; variantId?: string; quantity: number }) =>
     agentFetch(`/wholesale/orders/start`, {
