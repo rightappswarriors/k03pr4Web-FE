@@ -1,3 +1,4 @@
+// k03pr4Web-FE\app\wholesale\orders\[id]\page.tsx
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
@@ -18,22 +19,28 @@ import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import AgentAuthProvider from "@/components/auth/AgentAuthProvider";
 import { useSocket } from "@/providers/SocketProvider";
 import { purchaseOrderApi, type PaymentAttemptResult } from "@/services/purchase-order.service";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, isValidPHPhone, sanitizePhoneInput, tomorrow } from "@/lib/utils";
 import { ConversationEventCard } from "@/components/wholesale/conversation";
 import { DeliveryLocationPicker, type DeliveryLocation } from "@/components/wholesale/DeliveryLocationPicker";
 import type { PurchaseOrder } from "@/types/wholesale";
+import { DatePicker } from "@/components/ui/DatePicker";
 
 const statusLabel = (s: string) =>
   (
     ({
       PENDING: "Pending Review",
+      SUPPLIER_ACCEPTED: "Accepted",
+      PREPARING: "Preparing Order",
+      READY_FOR_DISPATCH: "Ready for Dispatch",
       ACCEPTED: "Accepted",
       REJECTED: "Rejected",
       IN_TRANSIT: "In Delivery",
       DELIVERED: "Completed",
+      COMPLETED: "Completed",
       CANCELLED: "Cancelled",
     }) as Record<string, string>
   )[s] ?? s;
+
 function Modal({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   return (
     <div
@@ -58,7 +65,7 @@ export default function PurchaseOrderDetailPage() {
   const [po, setPo] = useState<PurchaseOrder | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [modal, setModal] = useState<"accept" | "reject" | "payment" | "receipt" | "location" | null>(null);
+  const [modal, setModal] = useState<"accept" | "reject" | "payment" | "receipt" | "confirmReceipt" | "location" | null>(null);
   const [reason, setReason] = useState("");
   const [method, setMethod] = useState<"CARD" | "CASH" | "E_WALLET">("E_WALLET");
   const [reference, setReference] = useState("");
@@ -72,14 +79,16 @@ export default function PurchaseOrderDetailPage() {
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [paymentAttemptNotice, setPaymentAttemptNotice] = useState<string | null>(null);
   const [paymentAttemptResult, setPaymentAttemptResult] = useState<PaymentAttemptResult | null>(null);
+  const [deliverySaveNotice, setDeliverySaveNotice] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [mobileTab, setMobileTab] = useState<"details" | "conversation">("details");
+
   const load = useCallback(async () => {
     setError(null);
     try {
       const next = await purchaseOrderApi.get(id);
       setPo(next);
-      setDate(next.delivery?.scheduledDate?.slice(0, 10) ?? "");
+      setDate(next.requestedDate?.slice(0, 10) ?? next.delivery?.scheduledDate?.slice(0, 10) ?? "");
       setLocation({ address: next.delivery?.address ?? "", latitude: next.delivery?.latitude ?? null, longitude: next.delivery?.longitude ?? null });
       setInstructions(next.delivery?.notes ?? "");
       setRecipientName(next.delivery?.recipientName ?? "");
@@ -88,9 +97,11 @@ export default function PurchaseOrderDetailPage() {
       setError(e instanceof Error ? e.message : "Unable to load Purchase Order.");
     }
   }, [id]);
+
   useEffect(() => {
     void load();
   }, [load]);
+
   useEffect(
     () =>
       subscribe(({ event, payload }) => {
@@ -99,6 +110,7 @@ export default function PurchaseOrderDetailPage() {
       }),
     [subscribe, id, load],
   );
+
   const perform = async (fn: () => Promise<PurchaseOrder>) => {
     setBusy(true);
     setError(null);
@@ -111,45 +123,55 @@ export default function PurchaseOrderDetailPage() {
       setBusy(false);
     }
   };
+
   const continueToPayment = async () => {
     if (!po) return;
-    setBusy(true); setError(null); setPaymentAttemptNotice(null);
+    setBusy(true);
+    setError(null);
+    setPaymentAttemptNotice(null);
     try {
       const payment = await purchaseOrderApi.beginPayment(po.id);
-      if (payment.checkoutUrl) {
+      if (payment.checkoutReusable && payment.checkoutUrl) {
         window.location.assign(payment.checkoutUrl);
         return;
       }
       setPaymentAttemptResult(payment);
-      setPaymentAttemptNotice(payment.message ?? (payment.confirmed ? 'Payment Confirmed.' : 'Checking payment status with Maya.'));
+      setPaymentAttemptNotice(payment.message ?? (payment.confirmed ? "Payment Confirmed." : "Checking payment status with Maya."));
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Unable to prepare the Maya checkout.');
+      setError(e instanceof Error ? e.message : "Unable to prepare the Maya checkout.");
     } finally {
       setBusy(false);
     }
   };
+
   const retryVerification = async () => {
     const transactionId = po?.paymentAttempt?.id;
     if (!transactionId) return;
-    setBusy(true); setError(null); setPaymentAttemptNotice(null);
+    setBusy(true);
+    setError(null);
+    setPaymentAttemptNotice(null);
     try {
       const payment = await purchaseOrderApi.reconcilePayment(transactionId);
       setPaymentAttemptResult(payment);
-      setPaymentAttemptNotice(payment.message ?? (payment.confirmed
-        ? 'Payment Confirmed.'
-        : payment.active
-          ? 'Payment session is active and ready to continue.'
-          : payment.canRetry
-            ? 'This payment attempt is no longer active. You can try again.'
-            : 'Payment status still requires verification with Maya.'));
+      setPaymentAttemptNotice(
+        payment.message ??
+          (payment.confirmed
+            ? "Payment Confirmed."
+            : payment.active
+              ? "Payment session is active and ready to continue."
+              : payment.canRetry
+                ? "This payment attempt is no longer active. You can try again."
+                : "Payment status still requires verification with Maya."),
+      );
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Unable to verify the Maya payment status.');
+      setError(e instanceof Error ? e.message : "Unable to verify the Maya payment status.");
     } finally {
       setBusy(false);
     }
   };
+
   if (!po)
     return (
       <AgentAuthProvider>
@@ -170,6 +192,7 @@ export default function PurchaseOrderDetailPage() {
         </main>
       </AgentAuthProvider>
     );
+
   const subtotal = po.subtotalAmount;
   const charges = po.extraCharges ?? [];
   // Guard against a response where these arrays weren't populated (e.g. a
@@ -180,25 +203,53 @@ export default function PurchaseOrderDetailPage() {
   const attemptStatus = po.paymentAttempt?.status;
   const terminalAttempt = attemptStatus === "EXPIRED" || attemptStatus === "FAILED" || attemptStatus === "CANCELLED";
   const reconciliationAttempt = attemptStatus === "RECONCILIATION_REQUIRED";
-  const verifiedCheckoutUrl = paymentAttemptResult?.transactionId === po.paymentAttempt?.id && paymentAttemptResult?.active
-    ? paymentAttemptResult.checkoutUrl
-    : undefined;
+  const verifiedCheckoutUrl =
+    paymentAttemptResult?.transactionId === po.paymentAttempt?.id && paymentAttemptResult?.active && paymentAttemptResult?.checkoutReusable
+      ? paymentAttemptResult.checkoutUrl
+      : undefined;
   // A stored checkout URL is never trusted after a processing attempt. It may
   // be reused only when the reconciliation endpoint has verified it is active.
-  const reconciliationRequired = reconciliationAttempt || (!terminalAttempt && !verifiedCheckoutUrl && (attemptStatus === "PENDING" || attemptStatus === "PROCESSING" || attemptStatus === "AWAITING_PAYMENT"));
+  const reconciliationRequired =
+    reconciliationAttempt ||
+    (!terminalAttempt && !verifiedCheckoutUrl && (attemptStatus === "PENDING" || attemptStatus === "PROCESSING" || attemptStatus === "AWAITING_PAYMENT"));
   const paymentAttemptTitle = terminalAttempt
-    ? attemptStatus === "EXPIRED" ? "Payment Session Expired" : attemptStatus === "CANCELLED" ? "Payment Cancelled" : "Payment Failed"
-    : reconciliationAttempt ? "Payment Verification Required"
-    : attemptStatus === "AWAITING_PAYMENT" ? "Payment Awaiting Completion"
-    : "Payment Prepared";
+    ? attemptStatus === "EXPIRED"
+      ? "Payment Session Expired"
+      : attemptStatus === "CANCELLED"
+        ? "Payment Cancelled"
+        : "Payment Failed"
+    : reconciliationAttempt
+      ? "Payment Verification Required"
+      : attemptStatus === "AWAITING_PAYMENT"
+        ? "Payment Awaiting Completion"
+        : "Payment Prepared";
   const paymentAttemptCopy = terminalAttempt
-    ? attemptStatus === "EXPIRED" ? "This payment session has expired." : attemptStatus === "CANCELLED" ? "No payment was confirmed." : "Your payment was not completed. No payment was confirmed for this attempt."
-    : reconciliationAttempt ? "Maya reported this payment as completed, but Kompra cannot independently verify it yet."
-    : reconciliationRequired ? "Checking payment status with Maya..." : "Awaiting payment confirmation.";
+    ? attemptStatus === "EXPIRED"
+      ? "This payment session has expired."
+      : attemptStatus === "CANCELLED"
+        ? "No payment was confirmed."
+        : "Your payment was not completed. No payment was confirmed for this attempt."
+    : reconciliationAttempt
+      ? "Maya reported this payment as completed, but Kompra cannot independently verify it yet."
+      : reconciliationRequired
+        ? "Checking payment status with Maya..."
+        : "Awaiting payment confirmation.";
   const paymentAttemptButton = terminalAttempt ? "Try Payment Again" : "Continue to Payment";
+  const supplierCommittedDate = po.supplierExpectedDeliveryAt ? po.supplierExpectedDeliveryAt.slice(0, 10) : "";
+  const buyerRequestedDate = po.requestedDate ? po.requestedDate.slice(0, 10) : "";
+  const deliveryAgreement = (po as PurchaseOrder & { deliveryDateAgreementStatus?: string }).deliveryDateAgreementStatus;
+  const canEditRequestedDeliveryDate = po.supplierConfirmation === "REVIEW_REQUIRED" || po.status === "PREPARING";
+  const deliveryAgreementCopy =
+    deliveryAgreement === "AGREED"
+      ? "Delivery date agreed."
+      : deliveryAgreement === "PENDING_BUYER"
+        ? "Supplier proposed a different delivery date."
+        : "Waiting for supplier to confirm your requested delivery date.";
   const receipt = po.receiptSnapshot as Record<string, unknown> | null;
   const hasReceipt = po.paymentStatus === "PAID" && Boolean(receipt?.confirmedAt || receipt?.paidAt);
-  const shownPaymentStatus = po.paymentStatus === "PAID" && !hasReceipt ? (po.paymentPreparedAt ? "PREPARING" : "PENDING") : po.paymentStatus;
+  const shownPaymentStatus =
+    po.paymentStatus === "PAID" && !hasReceipt ? (po.paymentPreparedAt ? "PREPARING" : "PENDING") : po.paymentStatus;
+
   const Details = (
     <div className="space-y-5">
       <section className="rounded-xl border border-slate-200 bg-white">
@@ -210,22 +261,14 @@ export default function PurchaseOrderDetailPage() {
             <div key={item.id} className="flex gap-3 p-4 sm:items-center sm:gap-4">
               <div className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-100">
                 {item.supplierItem.image ? (
-                  <img
-                    className="h-full w-full object-cover"
-                    src={item.supplierItem.image}
-                    alt=""
-                  />
+                  <img className="h-full w-full object-cover" src={item.supplierItem.image} alt="" />
                 ) : (
                   <ClipboardList className="size-5 text-slate-400" />
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="font-medium text-slate-900">
-                  {item.itemName || item.supplierItem.name}
-                </p>
-                <p className="text-xs text-slate-500">
-                  SKU: {item.itemSku || item.supplierItem.sku || "—"}
-                </p>
+                <p className="font-medium text-slate-900">{item.itemName || item.supplierItem.name}</p>
+                <p className="text-xs text-slate-500">SKU: {item.itemSku || item.supplierItem.sku || "—"}</p>
                 <p className="mt-1 text-sm text-slate-600">
                   {formatPrice(item.unitPrice)} × {item.qty} {item.supplierItem.unit ?? ""}
                 </p>
@@ -238,6 +281,7 @@ export default function PurchaseOrderDetailPage() {
           ))}
         </div>
       </section>
+
       <section className="rounded-xl border border-slate-200 bg-white p-5">
         <h2 className="font-semibold text-slate-900">Order Total</h2>
         <div className="mt-4 ml-auto max-w-sm space-y-3 text-sm">
@@ -267,6 +311,7 @@ export default function PurchaseOrderDetailPage() {
           </div>
         </div>
       </section>
+
       <section className="rounded-xl border border-slate-200 bg-white p-5">
         <h2 className="font-semibold text-slate-900">
           {rfqs.length ? `Source RFQs (${rfqs.length})` : "Manual Purchase Order"}
@@ -274,70 +319,155 @@ export default function PurchaseOrderDetailPage() {
         {rfqs.length ? (
           <div className="mt-3 space-y-2">
             {rfqs.map((rfq) => (
-              <div
-                key={rfq.id}
-                className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-3 text-sm"
-              >
+              <div key={rfq.id} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-3 text-sm">
                 <div>
                   <p className="font-medium text-slate-800">{rfq.rfqNumber}</p>
                   <p className="text-xs text-slate-500">{rfq.status.replaceAll("_", " ")}</p>
                 </div>
-                <Link
-                  href={`/wholesale/inbox/${rfq.id}`}
-                  className="font-semibold text-[#287c72] hover:underline"
-                >
+                <Link href={`/wholesale/inbox/${rfq.id}`} className="font-semibold text-[#287c72] hover:underline">
                   View RFQ
                 </Link>
               </div>
             ))}
           </div>
         ) : (
-          <p className="mt-2 text-sm text-slate-600">
-            This PO was created directly and does not have an RFQ.
-          </p>
+          <p className="mt-2 text-sm text-slate-600">This PO was created directly and does not have an RFQ.</p>
         )}
       </section>
+
       <section className="rounded-xl border border-slate-200 bg-white p-5">
         <div className="flex items-center gap-2">
           <MapPin className="size-5 text-[#287c72]" />
           <h2 className="font-semibold text-slate-900">Delivery</h2>
         </div>
-        {po.status === "PENDING" || po.status === "REJECTED" ? (
-          <p className="mt-3 text-sm text-slate-500">
-            Delivery information can be prepared after this order is accepted.
-          </p>
+        {po.status === "REJECTED" ? (
+          <p className="mt-3 text-sm text-slate-500">Delivery information can be prepared after this order is accepted.</p>
         ) : (
           <>
-            <p className="mt-2 text-sm text-slate-600">
-              Set the expected delivery details for the supplier.
-            </p>
+            <p className="mt-2 text-sm text-slate-600">Set your requested date separately from the supplier's final delivery commitment.</p>
+
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <label className="text-sm font-medium text-slate-700">
-                Expected delivery date
-                <input
-                  type="date"
+                Requested delivery date
+                <DatePicker
                   value={date}
-                  onChange={(e) => setDate(e.target.value)}
+                  onChange={setDate}
+                  disabled={!canEditRequestedDeliveryDate}
+                  minDate={tomorrow()}
+                  placeholder="Select delivery date"
+                />
+                {!canEditRequestedDeliveryDate && <p className="mt-1 text-xs font-normal text-slate-500">Requested dates are locked once the order is ready for dispatch.</p>}
+              </label>
+              <div className="text-sm font-medium text-slate-700">
+                Supplier committed delivery date
+                <p className="mt-1.5 rounded-lg border border-slate-200 bg-slate-50 p-2.5 font-normal text-slate-700">
+                  {supplierCommittedDate
+                    ? new Date(`${supplierCommittedDate}T00:00:00`).toLocaleDateString("en-PH", { dateStyle: "medium" })
+                    : "Awaiting supplier commitment"}
+                </p>
+              </div>
+            </div>
+
+            <p className="mt-3 rounded-lg bg-slate-50 p-3 text-sm text-slate-700"><span className="font-semibold">Agreement:</span> {deliveryAgreementCopy}</p>
+
+            <label className="mt-4 block text-sm font-medium text-slate-700">
+              Delivery address
+              <input
+                value={location.address}
+                onChange={(e) => setLocation({ ...location, address: e.target.value })}
+                placeholder="City, province, address"
+                className="mt-1.5 w-full rounded-lg border border-slate-200 p-2.5 font-normal"
+              />
+            </label>
+
+            <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <p className="text-sm font-semibold text-slate-800">Delivery Location</p>
+              {location.latitude != null && location.longitude != null ? (
+                <>
+                  <p className="mt-1 text-sm text-slate-600">📍 {location.address || "Pinned delivery location"}</p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {location.latitude.toFixed(5)}, {location.longitude.toFixed(5)}
+                  </p>
+                  <div className="mt-3 flex gap-3">
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-sm font-semibold text-[#287c72]"
+                    >
+                      View on Map
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLocationDraft(location);
+                        setModal("location");
+                      }}
+                      className="text-sm font-semibold cursor-pointer text-[#287c72]"
+                    >
+                      Change Location
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="mt-1 text-sm text-slate-500">No delivery location selected</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLocationDraft(location);
+                      setModal("location");
+                    }}
+                    className="mt-3 rounded-lg border border-[#287c72] px-3 py-2 text-sm font-semibold text-[#287c72]"
+                  >
+                    Select Delivery Location
+                  </button>
+                </>
+              )}
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <label className="text-sm font-medium text-slate-700">
+                Recipient name
+                <input
+                  value={recipientName}
+                  onChange={(e) => setRecipientName(e.target.value)}
                   className="mt-1.5 w-full rounded-lg border border-slate-200 p-2.5 font-normal"
                 />
               </label>
-              <label className="text-sm font-medium text-slate-700">Delivery address
-                <input value={location.address} onChange={(e) => setLocation({ ...location, address: e.target.value })} placeholder="City, province, address" className="mt-1.5 w-full rounded-lg border border-slate-200 p-2.5 font-normal" />
+              <label className="text-sm font-medium text-slate-700">
+                Recipient contact
+                <input
+                  value={recipientContact}
+                  onChange={(e) => setRecipientContact(sanitizePhoneInput(e.target.value))}
+                  inputMode="tel"
+                  maxLength={13}
+                  placeholder="09XXXXXXXXX"
+                  className="mt-1.5 w-full rounded-lg border border-slate-200 p-2.5 font-normal"
+                />
+                {recipientContact && !isValidPHPhone(recipientContact) && (
+                  <p className="mt-1 text-xs font-normal text-red-600">Enter a valid PH mobile number, e.g. 09171234567.</p>
+                )}
               </label>
             </div>
-            <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
-              <p className="text-sm font-semibold text-slate-800">Delivery Location</p>
-              {location.latitude != null && location.longitude != null ? <><p className="mt-1 text-sm text-slate-600">📍 {location.address || "Pinned delivery location"}</p><p className="mt-1 text-xs text-slate-500">{location.latitude.toFixed(5)}, {location.longitude.toFixed(5)}</p><div className="mt-3 flex gap-3"><a href={`https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}`} target="_blank" rel="noreferrer" className="text-sm font-semibold text-[#287c72]">View on Map</a><button type="button" onClick={() => { setLocationDraft(location); setModal("location"); }} className="text-sm font-semibold cursor-pointer text-[#287c72]">Change Location</button></div></> : <><p className="mt-1 text-sm text-slate-500">No delivery location selected</p><button type="button" onClick={() => { setLocationDraft(location); setModal("location"); }} className="mt-3 rounded-lg border border-[#287c72] px-3 py-2 text-sm font-semibold text-[#287c72]">Select Delivery Location</button></>}
-            </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2"><label className="text-sm font-medium text-slate-700">Recipient name<input value={recipientName} onChange={(e) => setRecipientName(e.target.value)} className="mt-1.5 w-full rounded-lg border border-slate-200 p-2.5 font-normal" /></label><label className="text-sm font-medium text-slate-700">Recipient contact<input value={recipientContact} onChange={(e) => setRecipientContact(e.target.value)} className="mt-1.5 w-full rounded-lg border border-slate-200 p-2.5 font-normal" /></label></div>
-            <label className="mt-3 block text-sm font-medium text-slate-700">Delivery instructions<textarea value={instructions} onChange={(e) => setInstructions(e.target.value)} className="mt-1.5 w-full rounded-lg border border-slate-200 p-2.5 font-normal" /></label>
+
+            <label className="mt-3 block text-sm font-medium text-slate-700">
+              Delivery instructions
+              <textarea
+                value={instructions}
+                onChange={(e) => setInstructions(e.target.value)}
+                className="mt-1.5 w-full rounded-lg border border-slate-200 p-2.5 font-normal"
+              />
+            </label>
+
             <button
               disabled={busy}
               onClick={async () => {
                 setBusy(true);
+                setDeliverySaveNotice(null);
                 try {
                   await purchaseOrderApi.updateDelivery(po.id, {
-                    scheduledDate: date || undefined,
+                    scheduledDate: canEditRequestedDeliveryDate ? date || undefined : undefined,
                     address: location.address || undefined,
                     latitude: location.latitude,
                     longitude: location.longitude,
@@ -346,6 +476,7 @@ export default function PurchaseOrderDetailPage() {
                     recipientContact: recipientContact || undefined,
                   });
                   await load();
+                  setDeliverySaveNotice(canEditRequestedDeliveryDate && date ? "Requested delivery date saved. The supplier has been notified." : "Delivery information saved.");
                 } catch (e) {
                   setError(e instanceof Error ? e.message : "Unable to save delivery information.");
                 } finally {
@@ -356,30 +487,26 @@ export default function PurchaseOrderDetailPage() {
             >
               Save delivery information
             </button>
+            {deliverySaveNotice && <p className="mt-2 text-sm font-medium text-emerald-700">{deliverySaveNotice}</p>}
           </>
         )}
       </section>
     </div>
   );
+
   const Conversation = (
     <section className="rounded-xl border border-slate-200 bg-white p-5">
       <div className="flex items-center gap-2">
         <MessageSquare className="size-5 text-[#287c72]" />
         <div>
           <h2 className="font-semibold text-slate-900">Purchase order conversation</h2>
-          <p className="text-xs text-slate-500">
-            Discuss this purchase order directly with the supplier.
-          </p>
+          <p className="text-xs text-slate-500">Discuss this purchase order directly with the supplier.</p>
         </div>
       </div>
       <div className="mt-5 space-y-3">
         {po.conversation?.messages?.length ? (
           po.conversation.messages.map((msg) => (
-            <ConversationEventCard
-              key={msg.id}
-              event={{ kind: "message", data: msg }}
-              supplierName={po.supplier?.name ?? "Supplier"}
-            />
+            <ConversationEventCard key={msg.id} event={{ kind: "message", data: msg }} supplierName={po.supplier?.name ?? "Supplier"} />
           ))
         ) : (
           <p className="rounded-lg bg-slate-50 px-4 py-7 text-center text-sm text-slate-500">
@@ -416,6 +543,7 @@ export default function PurchaseOrderDetailPage() {
       </div>
     </section>
   );
+
   return (
     <AgentAuthProvider>
       <main className="min-h-screen bg-[#f7f7f5]">
@@ -424,40 +552,29 @@ export default function PurchaseOrderDetailPage() {
           <DashboardSidebar />
           <div className="min-w-0 flex-1">
             <div className="container-shell py-6 sm:py-8">
-              <Link
-                href="/wholesale/orders"
-                className="mb-5 inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-[#287c72]"
-              >
+              <Link href="/wholesale/orders" className="mb-5 inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-[#287c72]">
                 <ArrowLeft className="size-4" />
                 Purchase Orders
               </Link>
-              {error && (
-                <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                  {error}
-                </div>
-              )}
+
+              {error && <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+
               <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-3">
-                    <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-                      {po.poNumber}
-                    </h1>
+                    <h1 className="text-2xl font-bold tracking-tight text-slate-900">{po.poNumber}</h1>
                     <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800 ring-1 ring-amber-200">
                       {statusLabel(po.status)}
                     </span>
                   </div>
                   <p className="mt-2 text-sm text-slate-600">
-                    <span className="font-medium text-slate-800">
-                      {po.supplier?.name ?? "Supplier"}
-                    </span>{" "}
-                    · Created{" "}
+                    <span className="font-medium text-slate-800">{po.supplier?.name ?? "Supplier"}</span> · Created{" "}
                     {new Date(po.createdAt).toLocaleDateString("en-PH", { dateStyle: "long" })} ·{" "}
-                    {rfqs.length
-                      ? `${rfqs.length} RFQ${rfqs.length > 1 ? "s" : ""}`
-                      : "Manual purchase order"}
+                    {rfqs.length ? `${rfqs.length} RFQ${rfqs.length > 1 ? "s" : ""}` : "Manual purchase order"}
                   </p>
                 </div>
               </div>
+
               <div className="mb-5 flex rounded-lg bg-slate-200 p-1 md:hidden">
                 <button
                   onClick={() => setMobileTab("details")}
@@ -472,40 +589,103 @@ export default function PurchaseOrderDetailPage() {
                   Conversation
                 </button>
               </div>
+
               <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_21rem]">
                 <div className={mobileTab === "conversation" ? "hidden md:block" : ""}>
                   {Details}
                   <div className="mt-6 hidden md:block">{Conversation}</div>
                 </div>
-                <aside
-                  className={
-                    mobileTab === "conversation"
-                      ? "hidden md:block"
-                      : "space-y-5 xl:sticky xl:top-5 xl:self-start"
-                  }
-                >
+
+                <aside className={mobileTab === "conversation" ? "hidden md:block" : "space-y-5 xl:sticky xl:top-5 xl:self-start"}>
                   <section className="rounded-xl border border-slate-200 bg-white p-5">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Order status
-                    </p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Order status</p>
                     <h2 className="mt-2 text-lg font-bold text-slate-900">Supplier Confirmation</h2>
+
                     {po.supplierConfirmation === "REVIEW_REQUIRED" && (
-                      <p className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">Awaiting Supplier Confirmation. Payment will be available after the supplier accepts this order.</p>
-                    )}
-                    {po.supplierConfirmation === "DECLINED" && (
-                      <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-800"><span className="font-semibold">Order Declined by Supplier.</span>{po.rejectionReason ? ` Reason: ${po.rejectionReason}` : ""}</p>
-                    )}
-                    {isSupplierConfirmed && (
-                      <p className="mt-2 text-sm text-emerald-700">Supplier Confirmed{po.source === "RFQ" ? " from accepted quotation" : ""}.</p>
-                    )}
-                    {isSupplierConfirmed && po.paymentStatus === "PENDING" && (
                       <>
-                        <p className="mt-2 text-sm text-slate-600">
-                          The order is ready for payment preparation.
+                        <p className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+                          <span className="font-semibold">Waiting for Supplier Confirmation.</span> Payment is disabled until the supplier accepts
+                          this Purchase Order.
+                        </p>
+                        <button disabled className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-slate-300 py-2.5 text-sm font-semibold text-slate-600">
+                          <CreditCard className="size-4" />
+                          Prepare Payment
+                        </button>
+                      </>
+                    )}
+
+                    {po.supplierConfirmation === "DECLINED" && (
+                      <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-800">
+                        <span className="font-semibold">Order Declined by Supplier.</span>
+                        {po.rejectionReason ? ` Reason: ${po.rejectionReason}` : ""}
+                      </p>
+                    )}
+
+                    {isSupplierConfirmed && (
+                      <p className="mt-2 text-sm text-emerald-700">
+                        Supplier confirmed
+                        {po.supplierExpectedDeliveryAt
+                          ? ` · Delivery: ${new Date(po.supplierExpectedDeliveryAt).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })}`
+                          : ""}
+                        .
+                      </p>
+                    )}
+
+                    {po.paymentStatus === "PAID" && po.status === "SUPPLIER_ACCEPTED" && (
+                      <p className="mt-3 rounded-lg bg-blue-50 p-3 text-sm text-blue-800">
+                        <span className="font-semibold">Payment Confirmed.</span> Waiting for Supplier to prepare the order.
+                      </p>
+                    )}
+
+                    {po.status === "PREPARING" && (
+                      <p className="mt-3 rounded-lg bg-blue-50 p-3 text-sm text-blue-800">
+                        <span className="font-semibold">Order is being prepared.</span>
+                        {po.preparingAt ? ` Started ${new Date(po.preparingAt).toLocaleString("en-PH")}.` : ""}
+                      </p>
+                    )}
+
+                    {po.status === "PREPARING" && deliveryAgreement === "PENDING_BUYER" && supplierCommittedDate && (
+                      <div className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+                        <p>
+                          Supplier proposed{" "}
+                          {new Date(`${supplierCommittedDate}T00:00:00`).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })}.
                         </p>
                         <button
                           disabled={busy}
-                          onClick={() => { setPaymentError(null); setPaymentStep(1); setModal("payment"); }}
+                          onClick={() => perform(() => purchaseOrderApi.acceptSupplierDeliveryDate(po.id))}
+                          className="mt-3 rounded-lg bg-[#287c72] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                        >
+                          Accept Supplier Date
+                        </button>
+                      </div>
+                    )}
+
+                    {po.status === "READY_FOR_DISPATCH" && <p className="mt-3 rounded-lg bg-blue-50 p-3 text-sm text-blue-800">Ready for dispatch.</p>}
+                    {po.status === "IN_TRANSIT" && <p className="mt-3 rounded-lg bg-blue-50 p-3 text-sm text-blue-800">Order is on the way.</p>}
+
+                    {po.status === "DELIVERED" && (
+                      <>
+                        <p className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+                          Delivered — Please confirm that you received your order.
+                        </p>
+                        <button onClick={() => setModal("confirmReceipt")} className="mt-3 w-full rounded-lg bg-[#287c72] py-2.5 text-sm font-semibold text-white">
+                          Confirm Receipt
+                        </button>
+                      </>
+                    )}
+
+                    {po.status === "COMPLETED" && <p className="mt-3 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">Order Completed</p>}
+
+                    {isSupplierConfirmed && po.paymentStatus === "PENDING" && (
+                      <>
+                        <p className="mt-2 text-sm text-slate-600">The order is ready for payment preparation.</p>
+                        <button
+                          disabled={busy}
+                          onClick={() => {
+                            setPaymentError(null);
+                            setPaymentStep(1);
+                            setModal("payment");
+                          }}
                           className="mt-5 flex w-full items-center cursor-pointer justify-center gap-2 rounded-lg bg-[#287c72] py-2.5 text-sm font-semibold text-white"
                         >
                           <CreditCard className="size-4" />
@@ -513,37 +693,66 @@ export default function PurchaseOrderDetailPage() {
                         </button>
                       </>
                     )}
+
                     {isSupplierConfirmed && po.paymentStatus === "PREPARING" && (
                       <div className="mt-3 rounded-lg bg-blue-50 p-3 text-sm text-blue-800">
-                        <p><span className="font-semibold">{paymentAttemptTitle}.</span> {paymentAttemptCopy}</p>
+                        <p>
+                          <span className="font-semibold">{paymentAttemptTitle}.</span> {paymentAttemptCopy}
+                        </p>
                         {paymentAttemptNotice && <p className="mt-2 text-xs text-amber-800">{paymentAttemptNotice}</p>}
-                        {reconciliationRequired && <button disabled={busy} onClick={retryVerification} className="mt-3 cursor-pointer rounded-lg bg-[#287c72] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60">
-                          {busy ? "Verifying with Maya..." : "Retry Verification"}
-                        </button>}
-                        {verifiedCheckoutUrl && <button disabled={busy} onClick={() => window.location.assign(verifiedCheckoutUrl)} className="mt-3 cursor-pointer rounded-lg bg-[#287c72] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60">
-                          {busy ? 'Preparing Maya checkout…' : 'Continue to Payment'}
-                        </button>}
-                        {!attemptStatus && <button disabled={busy} onClick={continueToPayment} className="mt-3 cursor-pointer rounded-lg bg-[#287c72] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60">
-                          {busy ? 'Preparing Maya checkout…' : 'Continue to Payment'}
-                        </button>}
-                        {terminalAttempt && <button disabled={busy} onClick={continueToPayment} className="mt-3 cursor-pointer rounded-lg bg-[#287c72] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60">
-                          {busy ? 'Preparing a new Maya checkout…' : paymentAttemptButton}
-                        </button>}
+                        {reconciliationRequired && (
+                          <button
+                            disabled={busy}
+                            onClick={reconciliationAttempt ? retryVerification : continueToPayment}
+                            className="mt-3 cursor-pointer rounded-lg bg-[#287c72] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {busy ? "Checking with Maya..." : reconciliationAttempt ? "Retry Verification" : "Check / Retry Payment"}
+                          </button>
+                        )}
+                        {verifiedCheckoutUrl && (
+                          <button
+                            disabled={busy}
+                            onClick={() => window.location.assign(verifiedCheckoutUrl)}
+                            className="mt-3 cursor-pointer rounded-lg bg-[#287c72] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {busy ? "Preparing Maya checkout…" : "Continue to Payment"}
+                          </button>
+                        )}
+                        {!attemptStatus && (
+                          <button
+                            disabled={busy}
+                            onClick={continueToPayment}
+                            className="mt-3 cursor-pointer rounded-lg bg-[#287c72] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {busy ? "Preparing Maya checkout…" : "Continue to Payment"}
+                          </button>
+                        )}
+                        {terminalAttempt && (
+                          <button
+                            disabled={busy}
+                            onClick={continueToPayment}
+                            className="mt-3 cursor-pointer rounded-lg bg-[#287c72] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {busy ? "Preparing a new Maya checkout…" : paymentAttemptButton}
+                          </button>
+                        )}
                       </div>
                     )}
                   </section>
+
                   <section className="rounded-xl border border-slate-200 bg-white p-5">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Payment
-                    </p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Payment</p>
                     <p className="mt-2 font-semibold text-slate-900">
-                      {shownPaymentStatus === "PENDING" ? "Payment Pending" : shownPaymentStatus === "PREPARING" ? "Payment Prepared · Awaiting Payment" : shownPaymentStatus === "PAID" ? "Payment Confirmed" : shownPaymentStatus}
+                      {shownPaymentStatus === "PENDING"
+                        ? "Payment Pending"
+                        : shownPaymentStatus === "PREPARING"
+                          ? "Payment Prepared · Awaiting Payment"
+                          : shownPaymentStatus === "PAID"
+                            ? "Payment Confirmed"
+                            : shownPaymentStatus}
                     </p>
                     <p className="mt-1 text-sm text-slate-600">
-                      {hasReceipt ? "Amount paid" : "Amount due"}{" "}
-                      <span className="font-semibold text-slate-900">
-                        {formatPrice(po.totalAmount)}
-                      </span>
+                      {hasReceipt ? "Amount paid" : "Amount due"} <span className="font-semibold text-slate-900">{formatPrice(po.totalAmount)}</span>
                     </p>
                     {hasReceipt && (
                       <>
@@ -553,11 +762,10 @@ export default function PurchaseOrderDetailPage() {
                       </>
                     )}
                     {po.paymentPreparedAt && (
-                      <p className="mt-2 text-xs text-slate-500">
-                        Preparation saved · {po.paymentMethod?.replace("_", " ")}
-                      </p>
+                      <p className="mt-2 text-xs text-slate-500">Preparation saved · {po.paymentMethod?.replace("_", " ")}</p>
                     )}
                   </section>
+
                   <section className="rounded-xl border border-slate-200 bg-white p-5">
                     <div className="flex items-center gap-2">
                       <ReceiptText className="size-5 text-[#287c72]" />
@@ -566,9 +774,7 @@ export default function PurchaseOrderDetailPage() {
                     {hasReceipt ? (
                       <>
                         <p className="mt-3 text-sm font-medium text-slate-800">Receipt available</p>
-                        <p className="text-sm text-slate-600">
-                          Total {formatPrice(po.totalAmount)}
-                        </p>
+                        <p className="text-sm text-slate-600">Total {formatPrice(po.totalAmount)}</p>
                         <button
                           onClick={() => setModal("receipt")}
                           className="mt-3 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-[#287c72] cursor-pointer"
@@ -582,28 +788,22 @@ export default function PurchaseOrderDetailPage() {
                   </section>
                 </aside>
               </div>
-              <div className={mobileTab === "conversation" ? "mt-0 md:hidden" : "hidden"}>
-                {Conversation}
-              </div>
+
+              <div className={mobileTab === "conversation" ? "mt-0 md:hidden" : "hidden"}>{Conversation}</div>
             </div>
           </div>
         </div>
       </main>
+
       {modal === "accept" && (
         <Modal onClose={() => setModal(null)}>
           <h2 className="text-lg font-bold">Accept Purchase Order?</h2>
           <p className="mt-2 text-sm text-slate-600">
-            {po.poNumber} · {lineItems.length} items ·{" "}
-            <span className="font-semibold text-slate-900">{formatPrice(po.totalAmount)}</span>
+            {po.poNumber} · {lineItems.length} items · <span className="font-semibold text-slate-900">{formatPrice(po.totalAmount)}</span>
           </p>
-          <p className="mt-3 text-sm text-slate-600">
-            You are confirming that the purchase-order details are correct.
-          </p>
+          <p className="mt-3 text-sm text-slate-600">You are confirming that the purchase-order details are correct.</p>
           <div className="mt-5 flex justify-end gap-2">
-            <button
-              onClick={() => setModal(null)}
-              className="rounded-lg px-3 py-2 text-sm cursor-pointer font-semibold text-slate-600"
-            >
+            <button onClick={() => setModal(null)} className="rounded-lg px-3 py-2 text-sm cursor-pointer font-semibold text-slate-600">
               Cancel
             </button>
             <button
@@ -616,6 +816,7 @@ export default function PurchaseOrderDetailPage() {
           </div>
         </Modal>
       )}
+
       {modal === "reject" && (
         <Modal onClose={() => setModal(null)}>
           <h2 className="text-lg font-bold">Reject Purchase Order</h2>
@@ -629,10 +830,7 @@ export default function PurchaseOrderDetailPage() {
             />
           </label>
           <div className="mt-5 flex justify-end gap-2">
-            <button
-              onClick={() => setModal(null)}
-              className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600"
-            >
+            <button onClick={() => setModal(null)} className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600">
               Cancel
             </button>
             <button
@@ -645,12 +843,36 @@ export default function PurchaseOrderDetailPage() {
           </div>
         </Modal>
       )}
+
+      {modal === "confirmReceipt" && (
+        <Modal onClose={() => setModal(null)}>
+          <h2 className="text-lg font-bold">Confirm Order Receipt</h2>
+          <p className="mt-3 text-sm text-slate-600">
+            {po.poNumber} · {po.supplier?.name ?? "Supplier"}
+          </p>
+          <p className="mt-2 text-sm text-slate-600">By confirming, you acknowledge that the order has been received.</p>
+          <div className="mt-5 flex justify-end gap-2">
+            <button onClick={() => setModal(null)} className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600">
+              Cancel
+            </button>
+            <button
+              disabled={busy}
+              onClick={() => perform(() => purchaseOrderApi.confirmReceipt(po.id))}
+              className="rounded-lg bg-[#287c72] px-4 py-2 text-sm font-semibold text-white"
+            >
+              Confirm Receipt
+            </button>
+          </div>
+        </Modal>
+      )}
+
       {modal === "payment" && (
         <Modal onClose={() => setModal(null)}>
           <h2 className="text-lg font-bold">Prepare Payment</h2>
           <p className="mt-2 text-sm text-slate-600">
             {po.poNumber} · {po.supplier?.name ?? "Supplier"}
           </p>
+
           <div className="mt-4 rounded-lg bg-slate-50 p-3 text-sm">
             <div className="flex justify-between">
               <span>Amount due</span>
@@ -658,20 +880,70 @@ export default function PurchaseOrderDetailPage() {
             </div>
             <p className="mt-2 text-xs text-slate-500">No payment will be processed yet.</p>
           </div>
+
           <p className="mt-4 text-xs font-semibold text-[#287c72]">STEP 2 · DELIVERY</p>
-          <label className="mt-2 block text-sm font-semibold">
-            Expected delivery date *
-            <input type="date" min={new Date().toISOString().slice(0, 10)} value={date} onChange={(e) => setDate(e.target.value)} className="mt-1.5 w-full rounded-lg border border-slate-200 p-2.5 font-normal" />
-          </label>
+
+          <div className="text-sm font-medium text-slate-700">
+            <p>Requested delivery</p>
+            <p className="mt-1 text-sm font-normal text-slate-600">
+              {buyerRequestedDate
+                ? new Date(`${buyerRequestedDate}T00:00:00`).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })
+                : "Not specified"}
+            </p>
+          </div>
+
+          <div className="mt-3 text-sm font-medium text-slate-700">
+            Supplier-committed delivery date
+            <DatePicker
+              value={supplierCommittedDate}
+              minDate={tomorrow()}
+              onChange={() => undefined}
+              disabled
+              placeholder="Awaiting supplier commitment"
+            />
+            <p className="mt-1 text-xs font-normal text-slate-500">Payment preparation cannot change either delivery date.</p>
+          </div>
+
           <div className="mt-3">
             <DeliveryLocationPicker value={location} onChange={setLocation} />
           </div>
+
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <label className="text-sm font-semibold">Recipient name<input value={recipientName} onChange={(e) => setRecipientName(e.target.value)} className="mt-1.5 w-full rounded-lg border border-slate-200 p-2.5 font-normal" /></label>
-            <label className="text-sm font-semibold">Recipient contact<input value={recipientContact} onChange={(e) => setRecipientContact(e.target.value)} className="mt-1.5 w-full rounded-lg border border-slate-200 p-2.5 font-normal" /></label>
+            <label className="text-sm font-semibold">
+              Recipient name
+              <input
+                value={recipientName}
+                onChange={(e) => setRecipientName(e.target.value)}
+                className="mt-1.5 w-full rounded-lg border border-slate-200 p-2.5 font-normal"
+              />
+            </label>
+            <label className="text-sm font-semibold">
+              Recipient contact
+              <input
+                value={recipientContact}
+                onChange={(e) => setRecipientContact(sanitizePhoneInput(e.target.value))}
+                inputMode="tel"
+                maxLength={13}
+                placeholder="09XXXXXXXXX"
+                className="mt-1.5 w-full rounded-lg border border-slate-200 p-2.5 font-normal"
+              />
+              {recipientContact && !isValidPHPhone(recipientContact) && (
+                <p className="mt-1 text-xs font-normal text-red-600">Enter a valid PH mobile number, e.g. 09171234567.</p>
+              )}
+            </label>
           </div>
-          <label className="mt-3 block text-sm font-semibold">Delivery instructions<textarea value={instructions} onChange={(e) => setInstructions(e.target.value)} className="mt-1.5 w-full rounded-lg border border-slate-200 p-2.5 font-normal" /></label>
+
+          <label className="mt-3 block text-sm font-semibold">
+            Delivery instructions
+            <textarea
+              value={instructions}
+              onChange={(e) => setInstructions(e.target.value)}
+              className="mt-1.5 w-full rounded-lg border border-slate-200 p-2.5 font-normal"
+            />
+          </label>
+
           {paymentError && <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{paymentError}</p>}
+
           <label className="mt-4 block text-sm font-semibold">
             Payment method
             <select
@@ -684,6 +956,7 @@ export default function PurchaseOrderDetailPage() {
               <option value="CASH">Bank Transfer / Other</option>
             </select>
           </label>
+
           <label className="mt-3 block text-sm font-semibold">
             Reference (optional)
             <input
@@ -693,22 +966,43 @@ export default function PurchaseOrderDetailPage() {
               placeholder="Internal payment reference"
             />
           </label>
+
           <div className="mt-5 flex justify-end gap-2">
-            <button
-              onClick={() => setModal(null)}
-              className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600"
-            >
+            <button onClick={() => setModal(null)} className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600">
               Cancel
             </button>
             <button
               disabled={busy}
               onClick={() => {
-                if (!date || !location.address.trim()) {
-                  setPaymentError(!date ? "Expected delivery date is required." : "Delivery address is required.");
+                if (!supplierCommittedDate || !location.address.trim()) {
+                  setPaymentError(
+                    !supplierCommittedDate
+                      ? "Supplier confirmation is missing a committed delivery date. Please ask the supplier to update the order."
+                      : "Delivery address is required.",
+                  );
+                  return;
+                }
+                if (recipientContact && !isValidPHPhone(recipientContact)) {
+                  setPaymentError("Please enter a valid recipient contact number.");
                   return;
                 }
                 setPaymentError(null);
-                perform(() => purchaseOrderApi.preparePayment(po.id, method, { scheduledDate: date, address: location.address, latitude: location.latitude, longitude: location.longitude, notes: instructions, recipientName, recipientContact }, reference));
+                perform(() =>
+                  purchaseOrderApi.preparePayment(
+                    po.id,
+                    method,
+                    {
+                      scheduledDate: supplierCommittedDate,
+                      address: location.address,
+                      latitude: location.latitude,
+                      longitude: location.longitude,
+                      notes: instructions,
+                      recipientName,
+                      recipientContact,
+                    },
+                    reference,
+                  ),
+                );
               }}
               className="rounded-lg cursor-pointer bg-[#287c72] px-4 py-2 text-sm font-semibold text-white"
             >
@@ -717,19 +1011,34 @@ export default function PurchaseOrderDetailPage() {
           </div>
         </Modal>
       )}
+
       {modal === "location" && (
         <Modal onClose={() => setModal(null)}>
           <h2 className="text-lg font-bold text-slate-900">Select Delivery Location</h2>
-          <p className="mt-1 text-sm text-slate-600">Choose a point on the map, drag the marker, or use your current location. Nothing is saved until you confirm.</p>
+          <p className="mt-1 text-sm text-slate-600">
+            Choose a point on the map, drag the marker, or use your current location. Nothing is saved until you confirm.
+          </p>
           <div className="mt-4">
             <DeliveryLocationPicker value={locationDraft} onChange={setLocationDraft} />
           </div>
           <div className="mt-5 flex justify-end gap-2">
-            <button onClick={() => setModal(null)} className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 cursor-pointer">Cancel</button>
-            <button disabled={!locationDraft.address.trim()} onClick={() => { setLocation(locationDraft); setModal(null); }} className="rounded-lg bg-[#287c72] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 cursor-pointer">Confirm Location</button>
+            <button onClick={() => setModal(null)} className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 cursor-pointer">
+              Cancel
+            </button>
+            <button
+              disabled={!locationDraft.address.trim()}
+              onClick={() => {
+                setLocation(locationDraft);
+                setModal(null);
+              }}
+              className="rounded-lg bg-[#287c72] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 cursor-pointer"
+            >
+              Confirm Location
+            </button>
           </div>
         </Modal>
       )}
+
       {modal === "receipt" && (
         <Modal onClose={() => setModal(null)}>
           <h2 className="text-lg font-bold">Kompra.ph Receipt</h2>
@@ -748,13 +1057,8 @@ export default function PurchaseOrderDetailPage() {
               <span>{formatPrice(po.totalAmount)}</span>
             </div>
           </div>
-          <p className="mt-4 text-xs text-slate-500">
-            PDF download will appear here when receipt storage and a PDF endpoint are available.
-          </p>
-          <button
-            onClick={() => setModal(null)}
-            className="mt-5 rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold cursor-pointer"
-          >
+          <p className="mt-4 text-xs text-slate-500">PDF download will appear here when receipt storage and a PDF endpoint are available.</p>
+          <button onClick={() => setModal(null)} className="mt-5 rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold cursor-pointer">
             Close
           </button>
         </Modal>

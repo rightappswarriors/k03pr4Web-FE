@@ -25,3 +25,22 @@ export const deliverySteps = [
   "On Delivery",
   "Delivered",
 ];
+
+// e.g. in a shared utils file
+export function tomorrow(): Date {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return d;
+}
+
+// Strips everything except digits, preserving a leading "+" for +63 format
+export function sanitizePhoneInput(raw: string): string {
+  const hasPlus = raw.trim().startsWith("+");
+  const digits = raw.replace(/\D/g, "");
+  return (hasPlus ? "+" : "") + digits;
+}
+
+// Accepts 09XXXXXXXXX (11 digits) or +639XXXXXXXX (PH mobile formats)
+export function isValidPHPhone(value: string): boolean {
+  return /^09\d{9}$/.test(value) || /^\+639\d{9}$/.test(value);
+}

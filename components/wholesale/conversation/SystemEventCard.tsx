@@ -1,6 +1,6 @@
 "use client";
 
-import { Info, Calendar, Upload, CreditCard, Receipt, Truck } from "lucide-react";
+import { Info, Calendar, Upload, CreditCard, Receipt, Truck, Package } from "lucide-react";
 import { formatDateSafe, formatTimeSafe } from "@/lib/financial";
 import type { ConversationMessage } from "@/types/wholesale";
 
@@ -12,6 +12,7 @@ const EVENT_ICONS: Record<string, React.ReactNode> = {
   PAYMENT_UPDATE: <CreditCard className="size-5 text-amber-700" />,
   PAYMENT_SUBMITTED: <CreditCard className="size-5 text-amber-700" />,
   PAYMENT_RECEIVED: <CreditCard className="size-5 text-emerald-700" />,
+  ORDER_PREPARING: <Package className="size-5 text-blue-700" />,
   DELIVERY_SCHEDULED: <Calendar className="size-5 text-blue-700" />,
   SHIPMENT_DISPATCHED: <Truck className="size-5 text-indigo-700" />,
   REFUND_ISSUED: <CreditCard className="size-5 text-amber-700" />,
@@ -90,6 +91,11 @@ export default function SystemEventCard({ message }: SystemEventCardProps) {
           Amount: ₱{meta.amount.toLocaleString()}
         </p>
       ) : null;
+      break;
+
+    case "ORDER_PREPARING":
+      title = "Order Preparation Started";
+      details = <p className="mt-1 text-xs text-slate-600">The supplier has started preparing this order.</p>;
       break;
 
     case "DELIVERY_SCHEDULED":
