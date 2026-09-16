@@ -15,7 +15,7 @@ import ProductActionsCard from "@/components/wholesale/ProductActionsCard";
 import ProductTabs from "@/components/wholesale/ProductTabs";
 import WholesaleBreadcrumb from "@/components/wholesale/WholesaleBreadcrumb";
 import { wholesaleApi } from "@/services/wholesale.service";
-import type { WholesaleProduct } from "@/types/wholesale";
+import type { WholesaleProduct, ProductVariant } from "@/types/wholesale";
 import { trackProductView } from "@/lib/recentlyViewed";
 
 function ProductDetailSkeleton() {
@@ -57,6 +57,11 @@ export default function WholesaleProductPage() {
   const [product, setProduct] = useState<WholesaleProduct | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  // Single source of truth for which variant is selected on this page —
+  // shared by ProductGallery (image/attribute display) and
+  // ProductActionsCard (what actually gets ordered), so the two can never
+  // disagree about which variant the buyer is looking at.
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
 
   useEffect(() => {
     wholesaleApi
@@ -67,6 +72,10 @@ export default function WholesaleProductPage() {
         } else {
           setProduct(data);
           trackProductView(productId);
+          // Auto-select the isDefault variant if one exists; otherwise leave
+          // null so the buyer is required to choose before ordering.
+          const defaultVariant = data.variants?.find((v) => v.isDefault) ?? null;
+          setSelectedVariant(defaultVariant);
         }
       })
       .catch(() => setError(true))
@@ -143,6 +152,8 @@ export default function WholesaleProductPage() {
               }
               productName={product.name}
               variants={hasVariants ? product.variants : undefined}
+              selectedVariantId={selectedVariant?.id}
+              onVariantChange={setSelectedVariant}
             />
 
             {/* Product Summary */}
@@ -156,7 +167,11 @@ export default function WholesaleProductPage() {
 
             <ProductSupplierCard product={product} />
             <ShippingCard product={product} />
-            <ProductActionsCard product={product} />
+            <ProductActionsCard
+              product={product}
+              selectedVariant={selectedVariant}
+              hasVariants={hasVariants}
+            />
 
             {/* Packaging - only show if there is data */}
             {hasPackaging && product.packaging && <PackagingBuilder packaging={product.packaging} />}

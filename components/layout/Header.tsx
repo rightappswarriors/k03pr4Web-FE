@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import NotificationDropdown from "@/components/NotificationDropdown";
 import { useAuth } from "@/hooks/useAuth";
 import { clearAgentAuth } from "@/lib/agent-auth-storage";
+import { wholesaleApi } from "@/services/wholesale.service";
 
 type HeaderProps = { wholesale?: boolean };
 
@@ -28,9 +29,11 @@ export default function Navbar({ wholesale = false }: HeaderProps) {
 
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isWholesaleMenuOpen, setIsWholesaleMenuOpen] = useState(false);
+  const [isDesktopNavOpen, setIsDesktopNavOpen] = useState(false);
 
   const mobileProfileRef = useRef<HTMLDivElement>(null);
   const desktopProfileRef = useRef<HTMLDivElement>(null);
+  const desktopNavRef = useRef<HTMLDivElement>(null);
 
   const mobileCartIconRef = useRef<HTMLButtonElement>(null);
   const desktopCartIconRef = useRef<HTMLButtonElement>(null);
@@ -39,16 +42,42 @@ export default function Navbar({ wholesale = false }: HeaderProps) {
 
   const handleCartClick = () => {
     if (!isAuthenticated) {
-      localStorage.setItem("redirect_after_login", "/cart");
+      localStorage.setItem("redirect_after_login", wholesale ? "/wholesale/checkout" : "/cart");
       router.push("/login");
       return;
     }
 
-    router.push("/cart");
+    router.push(wholesale ? "/wholesale/checkout" : "/cart");
   };
 
   useEffect(() => {
     const syncCartCount = async () => {
+      if (wholesale) {
+        // Wholesale mode: count comes from the agent-scoped wholesale cart,
+        // not the retail api_cart — these are intentionally separate per
+        // Task D requirement 1 (do not mix with retail cart data).
+        // Skip entirely when logged out — getCart() is agent-protected and
+        // would otherwise force a redirect to agent login on every guest
+        // visit to a wholesale page.
+        if (!isAuthenticated) {
+          setCount(0);
+          return;
+        }
+        try {
+          const data = await wholesaleApi.getCart();
+          const totalCount = data.suppliers.reduce(
+            (sum: number, s: { lines: { quantity: number }[] }) =>
+              sum + s.lines.reduce((lineSum, l) => lineSum + l.quantity, 0),
+            0
+          );
+          setCount(totalCount);
+        } catch (error) {
+          console.error("Error syncing wholesale cart count:", error);
+          setCount(0);
+        }
+        return;
+      }
+
       const token = localStorage.getItem("access");
 
       if (!token || !API_URL) {
@@ -98,7 +127,7 @@ export default function Navbar({ wholesale = false }: HeaderProps) {
     };
 
     syncCartCount();
-  }, [API_URL, setCount, isAuthenticated]);
+  }, [API_URL, setCount, isAuthenticated, wholesale]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent | TouchEvent) {
@@ -114,6 +143,13 @@ export default function Navbar({ wholesale = false }: HeaderProps) {
 
       if (clickedOutsideMobile && clickedOutsideDesktop) {
         setIsProfileOpen(false);
+      }
+
+      const clickedOutsideDesktopNav =
+        desktopNavRef.current && !desktopNavRef.current.contains(target);
+
+      if (clickedOutsideDesktopNav) {
+        setIsDesktopNavOpen(false);
       }
     }
 
@@ -284,11 +320,34 @@ export default function Navbar({ wholesale = false }: HeaderProps) {
           </div>
 
           <nav className="hidden items-center gap-1 text-sm md:flex">
-            {(wholesale ? [
-              ["Products", "/wholesale/products"], ["Suppliers", "/wholesale/suppliers"], ["Deals", "/wholesale/deals"], ["Categories", "/wholesale#categories"],
-            ] : [["Products", "/products"], ["Stores", "/stores"]]).map(([label, href]) => (
-              <Link key={label} href={href} className="px-3 py-2 font-semibold text-[#b7e4d8] transition hover:text-white">{label}</Link>
-            ))}
+            <div className="relative" ref={desktopNavRef}>
+              <button
+                type="button"
+                onClick={() => setIsDesktopNavOpen((open) => !open)}
+                className="inline-flex items-center gap-1.5 px-3 py-2 font-semibold text-[#b7e4d8] transition hover:text-white"
+              >
+                {isDesktopNavOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+                Menu
+              </button>
+
+              {isDesktopNavOpen && (
+                <div className="absolute left-0 top-full z-50 mt-2 w-48 rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
+                  {(wholesale ? [
+                    ["Products", "/wholesale/products"], ["Suppliers", "/wholesale/suppliers"], ["Deals", "/wholesale/deals"], ["Categories", "/wholesale#categories"],
+                    ...(isAuthenticated ? [["Dashboard", "/wholesale/dashboard"]] : []),
+                  ] : [["Products", "/products"], ["Stores", "/stores"]]).map(([label, href]) => (
+                    <Link
+                      key={label}
+                      href={href}
+                      onClick={() => setIsDesktopNavOpen(false)}
+                      className="block rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-gray-100"
+                    >
+                      {label}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
 
             {!wholesale && <Link href="/wholesale" className="inline-flex items-center gap-1.5 px-3 py-2 font-semibold text-[#b7e4d8] transition hover:text-white"><Handshake className="h-4 w-4" />Wholesale Mode</Link>}
 
@@ -388,7 +447,7 @@ export default function Navbar({ wholesale = false }: HeaderProps) {
           <div className="border-t border-white/10 pt-2 text-sm md:hidden">
             {wholesale && <button type="button" aria-expanded={isWholesaleMenuOpen} onClick={() => setIsWholesaleMenuOpen((open) => !open)} className="flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 font-semibold text-[#b7e4d8] hover:bg-white/10 hover:text-white"><Menu className={isWholesaleMenuOpen ? "hidden h-4 w-4" : "h-4 w-4"} /><X className={isWholesaleMenuOpen ? "h-4 w-4" : "hidden h-4 w-4"} />Menu</button>}
             <div className={wholesale && !isWholesaleMenuOpen ? "hidden" : "flex items-center justify-center gap-1"}>
-              {(wholesale ? [["Products", "/products"], ["Suppliers", "/wholesale#suppliers"], ["Deals", "/wholesale#deals"], ["Categories", "/wholesale#categories"]] : [["Products", "/products"], ["Stores", "/stores"]]).map(([label, href]) => <Link key={label} href={href} className="px-3 py-2 font-semibold text-[#b7e4d8] hover:text-white">{label}</Link>)}
+              {(wholesale ? [["Products", "/products"], ["Suppliers", "/wholesale#suppliers"], ["Deals", "/wholesale#deals"], ["Categories", "/wholesale#categories"], ...(isAuthenticated ? [["Dashboard", "/wholesale/dashboard"]] : [])] : [["Products", "/products"], ["Stores", "/stores"]]).map(([label, href]) => <Link key={label} href={href} className="px-3 py-2 font-semibold text-[#b7e4d8] hover:text-white">{label}</Link>)}
               <Link href="/ai" className="inline-flex items-center px-3 py-2 font-semibold text-[#b7e4d8] hover:text-white"><Sparkles className="h-4 w-4" /></Link>
               {isAuthenticated && <NotificationDropdown />}
             </div>

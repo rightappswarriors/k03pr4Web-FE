@@ -1,5 +1,42 @@
 export type WholesaleCategory = { id: string; name: string; icon: string };
 
+export type PricingData = {
+  supplierItem: {
+    id: string;
+    name: string;
+    unitPrice: number;
+    moq: number;
+    availableQty: number;
+    image?: string;
+  };
+  priceTiers: Array<{
+    id: string;
+    minQty: number;
+    maxQty?: number | null;
+    price: number;
+    currency: string;
+  }>;
+  variantGroups: Array<{
+    id: string;
+    name: string;
+    options: Array<{
+      id: string;
+      value: string;
+      colorHex?: string;
+      image?: string;
+    }>;
+  }>;
+  variants: Array<{
+    id: string;
+    name: string;
+    price: number;
+    availableQty: number;
+    image?: string;
+    isActive: boolean;
+    optionIds: string[];
+  }>;
+};
+
 export type ProductPriceTier = {
   minQty: number;
   maxQty?: number;
@@ -621,3 +658,46 @@ export type NegotiationStatus =
   | "SUPPLIER_CONFIRMED"
   | "PO_CREATED"
   | "REJECTED";
+
+export type CartLine = {
+  id: string;
+  supplierItemId: string;
+  supplierItemVariantId: string | null;
+  itemName: string;
+  itemSku: string | null;
+  variantName: string | null;
+  variantSku: string | null;
+  unit: string;
+  quantity: number;
+  unitPrice: number;
+  tierMinQty: number | null;
+  tierMaxQty: number | null;
+  subtotal: number;
+};
+
+export type CartSupplierGroup = {
+  supplierId: number;
+  supplierName: string;
+  lines: CartLine[];
+  subtotal: number;
+};
+
+export type WholesaleCart = {
+  id: string | null;
+  suppliers: CartSupplierGroup[];
+  total: number;
+};
+
+export type CartLineError = {
+  lineId: string;
+  valid: boolean;
+  error: string;
+  priceChanged?: boolean;
+  previousUnitPrice?: number;
+  newUnitPrice?: number;
+};
+
+export type WholesaleCartValidation = WholesaleCart & {
+  valid: boolean;
+  lineErrors: CartLineError[];
+};
